@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * SmartReport - Generated reports handler
+ *
+ * Manages generated report records and display in report tabs.
+ */
+
 class PluginSmartreportGeneratedreport extends CommonDBChild
 {
     public static $itemtype = 'PluginSmartreportReportdefination';
@@ -34,12 +40,7 @@ class PluginSmartreportGeneratedreport extends CommonDBChild
         return true;
     }
 
-    /**
-     * Show all daily CSV files for this report, newest first.
-     * Each row represents one calendar day's generation.
-     * Same-day re-runs overwrite the same row, so there is at most one
-     * row per report per day.
-     */
+    // List generated reports for a report
     public static function showForReport(PluginSmartreportReportdefination $item): void
     {
         global $DB;
@@ -132,10 +133,7 @@ class PluginSmartreportGeneratedreport extends CommonDBChild
         echo "</div>";
     }
 
-    /**
-     * Format a byte count into a human-readable string (KB / MB / GB).
-     * Public alias available as formatFileSizePublic() for use outside this class.
-     */
+    // Format file size
     private static function formatFileSize(int $bytes): string
     {
         if ($bytes >= 1073741824) {
@@ -150,10 +148,7 @@ class PluginSmartreportGeneratedreport extends CommonDBChild
         return $bytes . ' B';
     }
 
-    /**
-     * Public alias of formatFileSize() — called from sendReportByEmail()
-     * in reportdefination.class.php to display the file size in the email body.
-     */
+    // Public alias for file size
     public static function formatFileSizePublic(int $bytes): string
     {
         return self::formatFileSize($bytes);

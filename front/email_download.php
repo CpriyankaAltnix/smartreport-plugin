@@ -1,23 +1,12 @@
 <?php
 
 /**
- * Email download landing page for SmartReport plugin.
+ * SmartReport - Email download landing page
  *
- * Gmail (and many other email clients) follow all links before the user clicks
- * them to generate link previews and perform security checks. If those prefetch
- * requests hit download.php directly they trigger a file-download response,
- * which the email client discards — meaning the real user click may do nothing.
+ * Prevents email client prefetch from triggering downloads.
+ * Shows a page with a button that calls download.php.
  *
- * This page solves that by acting as an intermediary:
- *   1. The email link points HERE (email_download.php?id=N&token=T)
- *   2. This page validates the token and renders an HTML page with a button
- *   3. The user clicks the button, which calls download.php?id=N&token=T
- *   4. download.php streams the file as before
- *
- * Because this page only returns HTML (never a file), email prefetching is
- * harmless. The actual download only happens on an explicit user click.
- *
- * Access: requires a valid GLPI session. Recipients are redirected to login first.
+ * Requires valid session and report access.
  */
 
 include('../../../inc/includes.php');
@@ -27,7 +16,7 @@ Session::checkLoginUser();
 
 $id    = (int)($_GET['id']    ?? 0);
 
-// ── Validate parameters ───────────────────────────────────────────────────────
+// Validate parameters
 if ($id <= 0) {
     http_response_code(400);
     render_error_page(
@@ -37,7 +26,7 @@ if ($id <= 0) {
     exit;
 }
 
-// ── Load report metadata for display ─────────────────────────────────────────
+// Load report metadata for display
 $generated = new PluginSmartreportGeneratedreport();
 if (!$generated->getFromDB($id)) {
     http_response_code(404);
@@ -67,7 +56,7 @@ if (!$report_obj->canViewItem()) {
     exit;
 }
 
-// ── Check the file exists on disk ─────────────────────────────────────────────
+// Check the file exists on disk
 $filepath = $generated->fields['file_path'];
 $filename = $generated->fields['file_name'];
 $file_ok  = !empty($filepath) && file_exists($filepath) && is_readable($filepath);
@@ -80,16 +69,14 @@ if ($file_ok) {
     }
 }
 
-// ── Build the download button URL ─────────────────────────────────────────────
-// Pass a fresh CSRF token so download.php can verify it.
-// The user already has a session (checked above) so the token is valid.
+// Build download URL with CSRF token
 $download_url = Plugin::getWebDir('smartreport')
     . '/front/download.php'
     . '?id='              . urlencode((string)$id)
     . '&_glpi_csrf_token=' . urlencode(Session::getNewCSRFToken());
 
 
-// ── Render the landing page ───────────────────────────────────────────────────
+// Render the landing page
 render_landing_page(
     $report_obj->fields['name']        ?? '',
     $generated->fields['generated_at'] ?? '',

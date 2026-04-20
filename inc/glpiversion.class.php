@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * SmartReport - GLPI version helper
+ *
+ * Provides version checks and compatibility helpers for GLPI 10/11.
+ */
+
 class GlpiVersion
 {
     /** @var int|null Cached major version — computed once per request. */
@@ -23,11 +29,7 @@ class GlpiVersion
         return self::getMajor() === 10;
     }
 
-    /**
-     * Return ['email' => string, 'name' => string] for the configured sender.
-     *
-     * GLPI 11 exposes Config::getEmailSender(); fall back to $CFG_GLPI for GLPI 10.
-     */
+    // Get email sender config
     public static function getEmailSender(): array
     {
         global $CFG_GLPI;
@@ -46,48 +48,25 @@ class GlpiVersion
         ];
     }
 
-    /**
-     * Absolute filesystem path to the plugin's document storage directory.
-     * GLPI_PLUGIN_DOC_DIR, so this is just a convenience wrapper.
-     */
+    // Plugin document directory
     public static function getPluginDocDir(): string
     {
         return rtrim(GLPI_SMARTREPORT_PLUGIN_DOC_DIR, '/') . '/';
     }
 
-    /**
-     * Web-accessible URL base for the plugin's front/ directory.
-     *
-     * Plugin::getWebDir() exists in both GLPI 10 and 11.
-     */
+    // Plugin web path
     public static function getPluginWebDir(): string
     {
         return Plugin::getWebDir('smartreport');
     }
 
-    /**
-     * Filesystem path to the plugin root directory.
-     *
-     * Plugin::getPhpDir() exists in both GLPI 10 and 11.
-     */
+    // Plugin filesystem path 
     public static function getPluginPhpDir(): string
     {
         return Plugin::getPhpDir('smartreport');
     }
 
-    /**
-     * Render the report form body.
-     *
-     * GLPI 11: uses TemplateRenderer + Twig (the existing template).
-     * GLPI 10: TemplateRenderer exists but some Twig macros used in the template
-     *          (fields.dropdownField, fields.dropdownYesNo, formatted_datetime
-     *          filter) are GLPI 11 additions. We render the form in plain PHP
-     *          using GLPI 10's Html/Dropdown helpers instead.
-     *
-     * @param PluginSmartreportReportdefination $item
-     * @param array $widgets   Pre-rendered dropdown HTML strings
-     * @param array $meta      ['next_run_display' => string]
-     */
+    // Render report form (GLPI 10/11 compatible)
     public static function renderForm(
         PluginSmartreportReportdefination $item,
         array $widgets,
@@ -130,15 +109,7 @@ class GlpiVersion
         return;
     }
 
-    /**
-     * Execute a raw SQL query, compatible with both GLPI 10 and 11.
-     *
-     * GLPI 11 introduced DB::doQuery().
-     * GLPI 10 uses DB::query() (the method that has always existed).
-     *
-     * @param  string $sql
-     * @return mixed        Query result resource / bool (same as the underlying call)
-     */
+    // DB query wrapper (GLPI 10/11)
     public static function dbQuery(string $sql)
     {
         global $DB;

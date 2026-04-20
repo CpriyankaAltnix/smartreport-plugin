@@ -7,7 +7,7 @@ Session::checkRight('plugin_smartreport', READ);
 
 $report = new PluginSmartreportReportdefination();
 
-// ── Save / Update ─────────────────────────────────────────────────────────────
+// Save / Update
 if (isset($_POST['add'])) {
     $report->check(-1, CREATE, $_POST);
     $new_id = $report->add($_POST);
@@ -32,7 +32,7 @@ if (isset($_POST['purge'])) {
     Html::redirect(Plugin::getWebDir('smartreport') . '/front/reportdefination.php');
 }
 
-// ── Reset a stuck RUNNING state ───────────────────────────────────────────────
+// Reset a stuck RUNNING state
 if (isset($_POST['resetstate'])) {
     $id = (int)($_POST['id'] ?? 0);
     $report->check($id, UPDATE, $_POST);
@@ -46,10 +46,7 @@ if (isset($_POST['resetstate'])) {
     Html::back();
 }
 
-// ── Execute a single report directly ─────────────────────────────────────────
-// Calls executeReportById() synchronously — no background process, no cron.
-// The cron (cronRunSmartReports) handles scheduled runs; this handler is only
-// for the manual "Execute" button on the report detail page.
+// Execute report manually (no cron)
 if (isset($_POST['execute'])) {
     $id = (int)($_POST['id'] ?? 0);
 
@@ -97,7 +94,7 @@ if (isset($_POST['execute'])) {
     Html::back();
 }
 
-// ── Display ───────────────────────────────────────────────────────────────────
+// Display
 Html::header(
     __('Smart Report', 'smartreport'),
     $_SERVER['PHP_SELF'],

@@ -1,32 +1,29 @@
 <?php
 
+/**
+ * SmartReport - Report definition handler
+ *
+ * Manages report configuration, execution, scheduling, and lifecycle.
+ */
+
 class PluginSmartreportReportdefination extends CommonDBTM
 {
     public static $rightname = 'plugin_smartreport';
 
-    /** The smart report is disabled (will not run via cron) */
-    public const STATE_DISABLE = 0;
-    /** Active and scheduled */
-    public const STATE_WAITING = 1;
-    /** Currently executing — prevents concurrent runs */
-    public const STATE_RUNNING = 2;
+    // Report states
+    public const STATE_DISABLE = 0; // Disabled
+    public const STATE_WAITING = 1; // Scheduled
+    public const STATE_RUNNING = 2; // In progress
 
     public const SEARCH_PAGE_SIZE = 500;
 
-    /**
-     * Execute permission bit — controls visibility of the Execute button.
-     * Value 1024 is the next available power-of-2 after standard GLPI rights
-     * (READ=1, UPDATE=4, CREATE=16, DELETE=8, PURGE=32, ALLSTANDARDRIGHT=63).
-     */
+    // Execute permission
     public const EXECUTE = 1024;
 
-    // ── File uniqueness modes ─────────────────────────────────────────────────
-    /** One file per report per calendar day — same-day runs overwrite */
-    public const UNIQUENESS_DAILY     = 0;
-    /** One file per report per calendar month — same-month runs overwrite */
-    public const UNIQUENESS_MONTHLY   = 1;
-    /** Every run creates a new file — nothing is overwritten */
-    public const UNIQUENESS_DUPLICATE = 2;
+    // ── File uniqueness modes
+    public const UNIQUENESS_DAILY     = 0; // One file per report per calendar day — same-day runs overwrite    
+    public const UNIQUENESS_MONTHLY   = 1; // One file per report per calendar month — same-month runs overwrite    
+    public const UNIQUENESS_DUPLICATE = 2; // Every run creates a new file — nothing is overwritten
 
     const DEFAULT_FILE_SIZE_LIMIT = 5;
 
@@ -291,8 +288,7 @@ class PluginSmartreportReportdefination extends CommonDBTM
         return true;
     }
 
-    // ── Dropdown helpers ──────────────────────────────────────────────────────
-
+    // Dropdown helpers
     public static function renderSavedSearchDropdown($selected = '')
     {
         ob_start();
@@ -375,18 +371,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
         return ob_get_clean();
     }
 
-    /**
-     * Render the "Email this report to" field as a Select2 AJAX multi-select.
-     *
-     * Instead of dumping every user/group into the page HTML, we render an
-     * empty <select> pre-populated only with the already-selected tokens and
-     * wire Select2 to fetch search results on demand from front/user_search.php.
-     *
-     * This keeps page load time constant regardless of the number of users.
-     *
-     * @param array $selected  Already-selected tokens, e.g. ['user_3', 'group_7']
-     * @return string          HTML string ready to be echoed into the form
-     */
     public static function renderUserGroupDropdown($selected = [])
     {
         global $DB;
@@ -479,14 +463,7 @@ class PluginSmartreportReportdefination extends CommonDBTM
         return ob_get_clean();
     }
 
-    /**
-     * Resolve a list of user_/group_ tokens to their display labels.
-     * Only fetches DB rows for the tokens actually present — used to pre-populate
-     * the Select2 field on edit without loading all users.
-     *
-     * @param  array $tokens  e.g. ['user_3', 'group_7', 'user_12']
-     * @return array          [token => label]  e.g. ['user_3' => 'John Doe']
-     */
+    // Resolve tokens to labels (for pre-selected values)
     private static function resolveTokenLabels(array $tokens): array
     {
         global $DB;
@@ -546,17 +523,7 @@ class PluginSmartreportReportdefination extends CommonDBTM
         return [];
     }
 
-    /**
-     * GLPI cron callback.
-     *
-     * Loops all WAITING reports, checks each one's individual schedule
-     * (frequency + hourmin/hourmax window), and calls executeReportById()
-     * directly for every report that is due.
-     *
-     * This is the ONLY place the cron is involved. The manual "Execute" button
-     * on the report form calls executeReportById() directly from the web handler
-     * — it does not go through this method and does not spawn any process.
-     */
+    // Cron handling
     public static function cronRunSmartReports(CronTask $task): int
     {
         global $DB;
@@ -612,16 +579,7 @@ class PluginSmartreportReportdefination extends CommonDBTM
         return 1;
     }
 
-    /**
-     * Execute a single report by ID.
-     *
-     * Called from:
-     *   - cronRunSmartReports()  for scheduled execution
-     *   - reportdefination.form.php  for manual Execute button clicks
-     *
-     * Handles the full pipeline: SavedSearch → CSV → generatedreport record
-     * → cleanup old files → update lastrun.
-     */
+    // Execution pipeline
     public static function executeReportById(int $id): void
     {
         $report_obj = new self();
@@ -632,9 +590,7 @@ class PluginSmartreportReportdefination extends CommonDBTM
         self::executeReport($report_obj->fields);
     }
 
-    /**
-     * Determine whether a report is due to run right now.
-     */
+    // Determine whether a report is due to run right now.
     public static function isTimeToRun(array $report): bool
     {
         if ((int)$report['status'] === self::STATE_DISABLE) {
@@ -660,10 +616,7 @@ class PluginSmartreportReportdefination extends CommonDBTM
         return $frequency > 0 && (time() - strtotime($report['lastrun'])) >= $frequency;
     }
 
-    /**
-     * Full execution pipeline for one report.
-     * Sets STATE_RUNNING at start, always restores STATE_WAITING in finally.
-     */
+    // Main execution logic
     private static function executeReport(array $report): void
     {
         self::setStatus((int)$report['id'], self::STATE_RUNNING);
