@@ -79,7 +79,7 @@ readfile($real_path);
 // ── Increment download count ONLY on successful transfer ─────────────────────
 // connection_aborted() returns 1 if the client closed the connection before
 // readfile() finished. Only count when the transfer completed fully.
-if ($external == '') {  
+if ($external == '') {
     if (!connection_aborted()) {
         PluginSmartreportReportdefination::incrementDownloadCount(
             $id,

@@ -1,10 +1,6 @@
 {% import 'components/form/fields_macros.html.twig' as fields %}
-{# {% import 'components/form/basic_inputs_macros.html.twig' as inputs %} #}
 
 <div class="asset">
-
-	{# {% set can_execute = item.canEdit(item.fields['id']) %} #}
-	{# can_execute is passed from GlpiVersion::renderForm() — computed via Session::haveRight(EXECUTE) #}
 
 	<div class="card-body d-flex flex-wrap">
 		<div class="col-12 col-xxl-12 flex-column">
@@ -34,7 +30,7 @@
 										input_class: 'col-xxl-7'
                                 	}
                                 ) }}
-							{% endif %}																				
+							{% endif %}
 
 							{# Status #}
 							{{ fields.dropdownArrayField('status', item.fields['status'], {
@@ -48,7 +44,7 @@
                                 }) 
                             }}
 
-                            {{ fields.textareaField('desc', item.fields['desc'], __('Description'), {
+							{{ fields.textareaField('desc', item.fields['desc'], __('Description'), {
 										label_class: 'col-xxl-5 text-xxl-end',
 										input_class: 'col-xxl-7'
                                 }) }}
@@ -56,14 +52,18 @@
 							{{ fields.smallTitle('Schedule') }}
 
 							<div class="form-field row align-items-center col-12 col-sm-6  mb-2">
-								<label class="col-form-label col-xxl-5 text-xxl-end " for="saved_search_id">Saved Search <span class="required">*</span></label>
+								<label class="col-form-label col-xxl-5 text-xxl-end " for="saved_search_id">Saved Search
+									<span class="required">*</span>
+								</label>
 								<div class="col-xxl-7  field-container text-xxl-start" data-select2-id="16">
 									{{ widgets['saved_search_id']|raw }}
 								</div>
 							</div>
 
 							<div class="form-field row align-items-center col-12 col-sm-6  mb-2">
-								<label class="col-form-label col-xxl-5 text-xxl-end " for="retention_period">Run frequency <span class="required">*</span></label>
+								<label class="col-form-label col-xxl-5 text-xxl-end " for="retention_period">Run frequency
+									<span class="required">*</span>
+								</label>
 								<div class="col-xxl-7  field-container" data-select2-id="16">
 									{{ widgets['frequency_dropdown']|raw }}
 								</div>
@@ -78,7 +78,9 @@
 
 							<div class="form-field row align-items-center col-12 col-sm-6  mb-2">
 
-								<label class="col-form-label col-xxl-5 text-xxl-end " for="uniqueness">{{ __('File Uniqueness', 'smartreport') }} <span class="required">*</span></label>
+								<label class="col-form-label col-xxl-5 text-xxl-end " for="uniqueness">{{ __('File Uniqueness', 'smartreport') }}
+									<span class="required">*</span>
+								</label>
 								<div class="col-xxl-7  field-container">
 									{{ widgets['uniqueness_dropdown']|raw }}
 								</div>
@@ -90,7 +92,7 @@
 								<div class="col-xxl-7  field-container" data-select2-id="16">
 									{{ widgets['user_email']|raw }}
 								</div>
-							</div>							
+							</div>
 
 							{% if not item.isNewItem() %}
 								<div
@@ -146,8 +148,8 @@
 							{% endif %}
 
 							{{ fields.smallTitle('Visibility') }}
-                        
-                            {{ fields.dropdownField('entity', 'entities_id', item.fields['entities_id'], __('Entity'), {
+
+							{{ fields.dropdownField('entity', 'entities_id', item.fields['entities_id'], __('Entity'), {
                                         required:  true,
 										label_class: 'col-xxl-5 text-xxl-end',
 										input_class: 'col-xxl-7 text-xxl-start',
@@ -155,7 +157,7 @@
                                 }) 
                             }}
 
-                            {{ fields.dropdownYesNo('is_recursive', item.fields['is_recursive'], __('Child entities'), {
+							{{ fields.dropdownYesNo('is_recursive', item.fields['is_recursive'], __('Child entities'), {
                                         required:  true,
 										add_field_class: 'text-xxl-start',
 										label_class: 'col-xxl-5 text-xxl-end',

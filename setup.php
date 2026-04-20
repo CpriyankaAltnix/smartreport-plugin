@@ -54,25 +54,21 @@ if (!defined('PLUGINSMARTREPORT_DIR')) {
  * Init hooks of the plugin.
  * REQUIRED
  */
-function plugin_init_smartreport(): void {
+function plugin_init_smartreport(): void
+{
     global $PLUGIN_HOOKS;
 
     $PLUGIN_HOOKS['csrf_compliant']['smartreport'] = true;
 
-    // Plugin::isPluginActive() exists in both GLPI 10 and 11
     if ((Session::getLoginUserID() || isCommandLine()) && Plugin::isPluginActive('smartreport')) {
         if (Session::haveRight('config', READ)) {
             $PLUGIN_HOOKS['menu_toadd']['smartreport'] = ['config' => PluginSmartreportMenu::class];
         }
 
-        // Plugin::registerClass() works in both GLPI 10 and 11
-        // (deprecated in 11 but still functional — harmless warning at worst)
         Plugin::registerClass(PluginSmartreportProfile::class, ['addtabon' => ['Profile']]);
         Plugin::registerClass(PluginSmartreportGeneratedreport::class);
         Plugin::registerClass(\GlpiPlugin\SmartReport\Config::class, ['addtabon' => ['Config']]);
     }
-
-    
 
     CronTask::register(
         'PluginSmartreportReportdefination',

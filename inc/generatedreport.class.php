@@ -92,7 +92,7 @@ class PluginSmartreportGeneratedreport extends CommonDBChild
             $is_today  = ($row['report_date'] === date('Y-m-d'));
             $row_class = $is_today ? 'tab_bg_2' : 'tab_bg_1';
 
-             // Human-readable file size
+            // Human-readable file size
             $file_size = '—';
             if ($file_exists) {
                 $bytes = filesize($row['file_path']);
@@ -159,8 +159,6 @@ class PluginSmartreportGeneratedreport extends CommonDBChild
         return self::formatFileSize($bytes);
     }
 
-
-
     public function rawSearchOptions()
     {
         $tab = [];
@@ -188,7 +186,7 @@ class PluginSmartreportGeneratedreport extends CommonDBChild
             'datatype' => 'datetime',
         ];
 
-         $tab[] = [
+        $tab[] = [
             'id'    => '4',
             'table' => self::getTable(),
             'field' => 'download_count',

@@ -3,9 +3,6 @@
 
 <div class="asset">
 
-	{# {% set can_execute = item.canEdit(item.fields['id']) %} #}
-	{# can_execute is passed from GlpiVersion::renderForm() — computed via Session::haveRight(EXECUTE) #}
-
 	<div class="card-body d-flex flex-wrap">
 		<div class="col-12 col-xxl-12 flex-column">
 			<div class="d-flex flex-row flex-wrap flex-xl-nowrap">
@@ -28,9 +25,9 @@
                                     name_field,
                                     __('Report Name')
                                 ) }}
-							{% endif %}							
+							{% endif %}
 
-							{{ fields.textareaField('desc', item.fields['desc'], __('Description')) }}							
+							{{ fields.textareaField('desc', item.fields['desc'], __('Description')) }}
 
 							{# Status #}
 							{{ fields.dropdownArrayField('status', item.fields['status'], {
@@ -44,43 +41,22 @@
 							{{ fields.smallTitle('Schedule') }}
 
 							<div class="form-field row align-items-center col-12 col-sm-6  mb-2">
-								<label class="col-form-label col-xxl-5 text-xxl-end " for="saved_search_id">Saved Search <span class="required">*</span></label>
+								<label class="col-form-label col-xxl-5 text-xxl-end " for="saved_search_id">Saved Search
+									<span class="required">*</span>
+								</label>
 								<div class="col-xxl-7  field-container" data-select2-id="16">
 									{{ widgets['saved_search_id']|raw }}
 								</div>
 							</div>
 
 							<div class="form-field row align-items-center col-12 col-sm-6  mb-2">
-								<label class="col-form-label col-xxl-5 text-xxl-end " for="retention_period">Run frequency <span class="required">*</span></label>
+								<label class="col-form-label col-xxl-5 text-xxl-end " for="retention_period">Run frequency
+									<span class="required">*</span>
+								</label>
 								<div class="col-xxl-7  field-container" data-select2-id="16">
 									{{ widgets['frequency_dropdown']|raw }}
 								</div>
 							</div>
-
-							{# Run period #}
-							{# {% set run_period_field %}
-							<div class="d-flex align-items-center">
-								{{ fields.dropdownNumberField('hourmin', item.fields['hourmin'], null, {
-                                        min: 0,
-                                        max: 24,
-                                        no_label: true,
-                                        field_class: ''
-                                    }) }}
-								<i class="ti ti-arrow-right mb-3"></i>
-								{% set run_period_max_hour = item.fields['hourmax'] is empty ? 24 : item.fields['hourmax'] %}
-								{{ fields.dropdownNumberField('hourmax', run_period_max_hour, null, {
-                                        min: 0,
-                                        max: 24,
-                                        no_label: true,
-                                        field_class: ''
-                                    }) }}
-							</div>
-							{% endset %}
-							{{ fields.htmlField('run_period', run_period_field, __('Run period'), {
-                                        add_field_class: 'text-xxl-start',
-                                        label_align: 'start'
-                                    }) 
-                            }} #}
 
 							<div class="form-field row align-items-center col-12 col-sm-6  mb-2">
 								<label class="col-form-label col-xxl-5 text-xxl-end " for="retention_period">Number of days this reports are stored</label>
@@ -91,7 +67,9 @@
 
 							<div class="form-field row align-items-center col-12 col-sm-6  mb-2">
 
-								<label class="col-form-label col-xxl-5 text-xxl-end " for="uniqueness">{{ __('File Uniqueness', 'smartreport') }} <span class="required">*</span></label>
+								<label class="col-form-label col-xxl-5 text-xxl-end " for="uniqueness">{{ __('File Uniqueness', 'smartreport') }}
+									<span class="required">*</span>
+								</label>
 								<div class="col-xxl-7  field-container">
 									{{ widgets['uniqueness_dropdown']|raw }}
 								</div>
@@ -103,7 +81,7 @@
 								<div class="col-xxl-7  field-container" data-select2-id="16">
 									{{ widgets['user_email']|raw }}
 								</div>
-							</div>							
+							</div>
 
 							{% if not item.isNewItem() %}
 								<div
@@ -114,7 +92,6 @@
 										{{ __('Never') }}
 									{% else %}
 										{{ item.fields['lastrun']|formatted_datetime }}
-										{# <button class="btn btn-primary" type="submit" name="execute" value="{{ item.fields['name'] }}">{{ __('Download Link') }}</button> #}
 									{% endif %}
 									{% endset %}
 									{{ fields.htmlField('last_run', last_run_field, __('Last run'), {
@@ -135,12 +112,10 @@
 											{{ __('Maintenance mode enabled, running tasks is disabled') }}
 										</div>
 									{% elseif can_execute and launch %}
-										{# ID and CSRF token fields are defined in components/form/buttons.html.twig #}
 										<button class="btn btn-primary" type="submit" name="execute" value="{{ item.fields['name'] }}">{{ __('Execute') }}</button>
 									{% endif %}
 
 									{% if can_execute and item.fields['status'] == constant('PluginSmartreportReportdefination::STATE_RUNNING') %}
-										{# ID and CSRF token fields are defined in components/form/buttons.html.twig #}
 										<button class="btn btn-primary" type="submit" name="resetstate">
 											<i class="ti ti-circle-x me-1"></i>
 											{{ __('Blank') }}
@@ -155,13 +130,13 @@
 							{% endif %}
 
 							{{ fields.smallTitle('Visibility') }}
-                        
-                            {{ fields.dropdownField('entity', 'entities_id', item.fields['entities_id'], __('Entity'), {
+
+							{{ fields.dropdownField('entity', 'entities_id', item.fields['entities_id'], __('Entity'), {
                                         required:  true
                                 }) 
                             }}
 
-                            {{ fields.dropdownYesNo('is_recursive', item.fields['is_recursive'], __('Child entities'), {
+							{{ fields.dropdownYesNo('is_recursive', item.fields['is_recursive'], __('Child entities'), {
                                         required:  true,
 										add_field_class: 'text-xxl-start',
                                 }) 

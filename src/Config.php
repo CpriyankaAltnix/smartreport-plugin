@@ -21,7 +21,6 @@ use Toolbox;
  */
 class Config extends CommonGLPI
 {
-    /** Default file size limit in MB (0 = always attach) */
     const DEFAULT_FILE_SIZE_LIMIT = 5;
 
     /** Config context key used in glpi_configs */
@@ -29,10 +28,6 @@ class Config extends CommonGLPI
 
     const CONFIG_KEY_FROM_EMAIL        = 'smartreport_from_email';
     const CONFIG_KEY_FILE_SIZE_LIMIT   = 'smartreport_file_size_limit';
-
-    // =========================================================================
-    // Tab integration
-    // =========================================================================
 
     public static function getTypeName($nb = 0)
     {
@@ -67,10 +62,6 @@ class Config extends CommonGLPI
         return true;
     }
 
-    // =========================================================================
-    // Form rendering
-    // =========================================================================
-
     public static function showConfigForm(): void
     {
         // Read current values from GLPI's config store
@@ -81,9 +72,6 @@ class Config extends CommonGLPI
             ? (int)$values[self::CONFIG_KEY_FILE_SIZE_LIMIT]
             : self::DEFAULT_FILE_SIZE_LIMIT;
 
-        // The form posts to GLPI's own Config::update() handler via the standard
-        // Toolbox::getItemTypeFormURL('Config') action. GLPI reads config_class and
-        // config_context hidden fields to route the save back to this class.
         echo "<form name='form' action=\"" . \Toolbox::getItemTypeFormURL('Config') . "\" method='post'>";
         echo \Html::hidden('config_class',   ['value' => addslashes(self::class)]);
         echo \Html::hidden('config_context', ['value' => self::CONFIG_CONTEXT]);
@@ -139,10 +127,6 @@ class Config extends CommonGLPI
         echo "</table></div>";
         Html::closeForm();
     }
-
-    // =========================================================================
-    // Config accessors — used by reportdefination.class.php
-    // =========================================================================
 
     /**
      * Return all Smart Report config values as an array.

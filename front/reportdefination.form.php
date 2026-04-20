@@ -105,7 +105,7 @@ Html::header(
     'PluginSmartreportMenu'
 );
 
-if(!isset($_GET['id']) || $_GET['id'] <= 0){
+if (!isset($_GET['id']) || $_GET['id'] <= 0) {
     Session::checkRight('plugin_smartreport', CREATE);
 }
 

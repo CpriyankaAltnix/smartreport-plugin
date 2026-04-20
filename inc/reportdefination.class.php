@@ -170,7 +170,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
 
         GlpiVersion::dbQuery('DROP TABLE IF EXISTS `glpi_plugin_smartreport_generatedreports`');
         GlpiVersion::dbQuery('DROP TABLE IF EXISTS `' . self::getTable() . '`');
-        // PluginSmartreportConfig::uninstallConfigTable();
 
         (new CronTask())->deleteByCriteria(['itemtype' => self::class, 'name' => 'runSmartReports']);
         (new DisplayPreference())->deleteByCriteria(['itemtype' => __CLASS__]);
@@ -241,7 +240,7 @@ class PluginSmartreportReportdefination extends CommonDBTM
     public function showForm($ID, $options = []): bool
     {
         global $DB;
-        
+
         $this->initForm($ID, $options);
         $this->showFormHeader($options);
 
@@ -281,7 +280,7 @@ class PluginSmartreportReportdefination extends CommonDBTM
             [
                 'saved_search_id'       => self::renderSavedSearchDropdown($this->fields['saved_search_id']),
                 'retention_period'      => self::renderRetentionPeriodDropdown($this->fields['retention_period']),
-                'user_email'            => self::renderUserGroupDropdown(explode("|",$this->fields['user_email'])),
+                'user_email'            => self::renderUserGroupDropdown(explode("|", $this->fields['user_email'])),
                 'frequency_dropdown'    => self::renderFrequencyDropdown($this->fields['frequency']),
                 'uniqueness_dropdown'   => self::renderUniquenessDropdown($this->fields['uniqueness'] ?? self::UNIQUENESS_DAILY),
             ],
@@ -392,19 +391,14 @@ class PluginSmartreportReportdefination extends CommonDBTM
     {
         global $DB;
 
-        // Resolve display labels for already-selected tokens so the field
-        // shows meaningful text on page load (not just blank selected options).
         $preloaded = self::resolveTokenLabels((array)$selected);
 
         $ajax_url = Plugin::getWebDir('smartreport') . '/front/user_search.php';
 
-        // Build a unique HTML id so multiple instances on the same page don't clash
         $field_id = 'smartreport_user_email_' . mt_rand(1000, 9999);
 
         ob_start();
 
-        // The <select multiple> that Select2 will enhance.
-        // Only pre-selected options are rendered — all other results come via AJAX.
         echo "<select id='" . $field_id . "' name='user_email[]' multiple='multiple' "
             . "style='width:100%' class='smartreport-user-select'>";
 
@@ -416,8 +410,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
 
         echo "</select>";
 
-        // Inline JS: initialise Select2 with AJAX on this specific field.
-        // Select2 is already loaded globally by both GLPI 10 and GLPI 11.
         $ajax_url_js = addslashes($ajax_url);
         $placeholder = addslashes(__("Search users or groups…", "smartreport"));
 
@@ -546,10 +538,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
         return $labels;
     }
 
-    // =========================================================================
-    // Cron — scheduled execution of all due reports
-    // =========================================================================
-
     public static function cronInfo(string $name): array
     {
         if ($name === 'runSmartReports') {
@@ -603,7 +591,7 @@ class PluginSmartreportReportdefination extends CommonDBTM
             try {
                 self::executeReportById((int)$report['id']);
                 $count++;
-                
+
                 $elapsed = round(microtime(true) - $t_start, 2);
                 Toolbox::logInFile(
                     'smartreport',
@@ -623,10 +611,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
         Toolbox::logInFile('smartreport', "[SmartReport] Cron finished. Ran $count report(s).\n");
         return 1;
     }
-
-    // =========================================================================
-    // Public execution API — used by both the cron and the Execute button
-    // =========================================================================
 
     /**
      * Execute a single report by ID.
@@ -684,18 +668,11 @@ class PluginSmartreportReportdefination extends CommonDBTM
     {
         self::setStatus((int)$report['id'], self::STATE_RUNNING);
 
-        // ── Resource limits ───────────────────────────────────────────────────
-        // Large datasets (thousands of records) can exceed default PHP limits.
-        // We raise limits here so the cron does not time out or run out of memory.
-        // The original limits are restored in the finally block.
         $prev_time_limit   = (int)ini_get('max_execution_time');
         $prev_memory_limit = ini_get('memory_limit');
 
-        // 0 = no time limit; safe for CLI cron and GLPI's automatic action runner
-        set_time_limit(900);
+        set_time_limit(0);
 
-        // Raise memory to at least 512 MB if the current limit is lower.
-        // Uses bytes for comparison so "128M", "256M", "-1" are all handled.
         $current_memory = self::parseMemoryLimit($prev_memory_limit);
         if ($current_memory !== -1 && $current_memory < 512 * 1024 * 1024) {
             ini_set('memory_limit', '512M');
@@ -709,9 +686,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
                 );
             }
 
-            // Stream the search results directly to a CSV file page-by-page.
-            // This keeps memory proportional to one page (SEARCH_PAGE_SIZE rows)
-            // rather than the entire dataset.
             $file = self::streamCSV($report, $saved);
 
             self::upsertGeneratedReportEntry($report, $file);
@@ -720,12 +694,10 @@ class PluginSmartreportReportdefination extends CommonDBTM
 
             self::updateLastRun((int)$report['id']);
 
-            // Send the CSV by email to all configured recipients (non-fatal)
             if (!empty($report['user_email'])) {
                 try {
                     self::sendReportByEmail($report, $file);
                 } catch (\Throwable $e) {
-                    // Email failure must never abort the report run
                     Toolbox::logInFile(
                         'smartreport',
                         "[SmartReport] Email delivery failed for report id={$report['id']}: "
@@ -748,7 +720,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
                 set_time_limit($prev_time_limit);
             }
             ini_set('memory_limit', $prev_memory_limit);
-
         }
     }
 
@@ -765,9 +736,12 @@ class PluginSmartreportReportdefination extends CommonDBTM
         $last = strtolower($val[strlen($val) - 1]);
         $num  = (int)$val;
         switch ($last) {
-            case 'g': return $num * 1024 * 1024 * 1024;
-            case 'm': return $num * 1024 * 1024;
-            case 'k': return $num * 1024;
+            case 'g':
+                return $num * 1024 * 1024 * 1024;
+            case 'm':
+                return $num * 1024 * 1024;
+            case 'k':
+                return $num * 1024;
         }
         return $num;
     }
@@ -778,7 +752,7 @@ class PluginSmartreportReportdefination extends CommonDBTM
      *
      * @return array{itemtype: string, params: array, forcedisplay: array}
      */
-    private static function buildSearchParams(SavedSearch $saved): array
+    private static function buildSearchParams(SavedSearch $saved, $user_id): array
     {
         $itemtype     = $saved->fields['itemtype'];
         $query_string = $saved->fields['query'] ?? '';
@@ -796,17 +770,14 @@ class PluginSmartreportReportdefination extends CommonDBTM
         }
 
         if (empty($forcedisplay)) {
-            $displaypref  = DisplayPreference::getForTypeUser($itemtype, 2);
+            $displaypref  = DisplayPreference::getForTypeUser($itemtype, $user_id);
             $forcedisplay = array_values($displaypref);
         }
 
         $params['itemtype']   = $itemtype;
-        $params['start']      = 0;
-        $params['export_all'] = 1;
         $params['sort'][0]    = 19;
-        // Do NOT set export_all — we page through results manually so we
-        // control memory usage rather than letting Search load everything at once.
-        // unset($params['export_all']);
+
+        unset($params['start'], $params['export_all']);
 
         return [
             'itemtype'     => $itemtype,
@@ -848,7 +819,7 @@ class PluginSmartreportReportdefination extends CommonDBTM
         return $headers;
     }
 
-     /**
+    /**
      * Stream the SavedSearch results page-by-page, writing each page directly
      * to an open CSV file handle, then discarding it.
      *
@@ -859,11 +830,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
      */
     private static function streamCSV(array $report, SavedSearch $saved): array
     {
-        // ── Page size ─────────────────────────────────────────────────────────
-        // 500 rows per page is a safe balance:
-        //    Small enough to stay comfortably within the raised memory limit
-        //    Large enough to avoid excessive Search::getDatas() round-trips
-        // (9000 rows = 18 pages vs 9000 SQL calls for 1-at-a-time)
 
         $dir = rtrim(GLPI_SMARTREPORT_PLUGIN_DOC_DIR, '/') . '/';
         if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
@@ -881,67 +847,30 @@ class PluginSmartreportReportdefination extends CommonDBTM
             throw new \RuntimeException("[SmartReport] Cannot write file: $filepath");
         }
 
-        // Initialise before try so finally can always call restoreCronSession()
-        // even if an exception is thrown before initCronSession() is reached.
         $saved_session = $_SESSION;
-        
+
         try {
             fwrite($fp, "\xEF\xBB\xBF"); // UTF-8 BOM — Excel needs this to detect UTF-8
 
             ['itemtype' => $itemtype, 'params' => $base_params, 'forcedisplay' => $forcedisplay]
-                = self::buildSearchParams($saved);
+                = self::buildSearchParams($saved, $report['users_id']);
 
-            // ── Cron session bootstrap ────────────────────────────────────────
-            // Search::getDatas() in GLPI 10 reads $_SESSION['glpiname'] and
-            // $_SESSION['glpigroups'] unconditionally inside addDefaultJoin() to
-            // build entity/group visibility JOINs. During a web request these are
-            // populated by Session::init(). During cron execution GLPI only starts
-            // the DB and config — no user session exists — so both keys are
-            // undefined, causing PHP warnings and making the JOIN return no rows.
-            //
-            // We populate the minimum required session state from the report's
-            // stored users_id, then restore everything afterwards.
-            // self::initCronSession((int)$report['users_id']);
             self::initCronSession();
 
-            
-
-            // Session::initEntityProfiles(2);
-            // Session::changeProfile(4);
-            // Session::changeActiveEntities(0);
-
             $glpicronuserrunning = $_SESSION["glpicronuserrunning"] ?? null;
-            // unset($_SESSION['glpicronuserid']);
             unset($_SESSION['glpicronuserrunning']);
-            
-            // $_SESSION['glpilist_limit'] = self::SEARCH_PAGE_SIZE;
 
             $headers_written = false;
             $offset          = 0;
             $row_count       = 0;
+            $total_count     = 0;    // captured from first page; drives termination
             $cols            = null;   // populated from the first page only
 
             do {
                 $params          = $base_params;
                 $params['start'] = $offset;
-                // $params['list_limit'] = self::SEARCH_PAGE_SIZE;
-
-                // Page size is controlled via $_SESSION['glpilist_limit']
-                // (set in initCronSession). The 'list_limit' key in $params is
-                // ignored by GLPI 10's Search::getDatas().
-
-
-                // Toolbox::logInFile(
-                //         'smartreport_11',
-                //         " itemtype - " . $itemtype . "<pre>" . print_r($params, true) . "</pre> forcedisplay - " . print_r($forcedisplay, true) ." \n"
-                // );
 
                 $data = Search::getDatas($itemtype, $params, $forcedisplay);
-                
-                // Toolbox::logInFile(
-                //         'smartreport_11',
-                //         "get datas all records -----<pre>" . print_r($data, true) . "</pre> \n"
-                // );
 
                 // Write column headers once from the first page's col metadata
                 if (!$headers_written) {
@@ -951,20 +880,20 @@ class PluginSmartreportReportdefination extends CommonDBTM
                     }
                     $headers_written = true;
                     $cols            = $data['data']['cols'] ?? [];
+                    $total_count     = (int)($data['data']['totalcount'] ?? 0);
+
+                    Toolbox::logInFile(
+                        'smartreport',
+                        "[SmartReport] Report id={$report['id']}: Search returned 
+                     row(s) on page 1 of ~$total_count total.\n"
+                    );
+
+                    if ($total_count === 0) {
+                        break;
+                    }
                 }
 
                 $page_rows = $data['data']['rows'] ?? [];
-
-                // Log what Search returned on the first page — essential for
-                // diagnosing future session/entity/rights issues without guessing
-                if (!$headers_written || $offset === 0) {
-                    $total_count = $data['data']['totalcount'] ?? 'unknown';
-                    Toolbox::logInFile(
-                        'smartreport',
-                        "[SmartReport] Report id={$report['id']}: Search returned "
-                            . count($page_rows) . " row(s) on page 1 of ~$total_count total.\n"
-                    );
-                }
 
                 if (empty($page_rows)) {
                     break;   // no rows returned — we have consumed all results
@@ -983,42 +912,30 @@ class PluginSmartreportReportdefination extends CommonDBTM
                     $row_count++;
                 }
 
-                // Log progress every 10 pages to confirm liveness in the cron log
-                if (($offset / self::SEARCH_PAGE_SIZE) % 10 === 0 && $offset > 0) {
+                $page_count = count($page_rows);
+                $offset    += $page_count;
+
+                if ($row_count % (self::SEARCH_PAGE_SIZE * 10) === 0 && $row_count > 0) {
                     Toolbox::logInFile(
                         'smartreport',
                         "[SmartReport] Report id={$report['id']}: $row_count row(s) written so far...\n"
                     );
-                    // Yield CPU briefly so other processes aren't starved
-                    // (usleep is a no-op during CLI cron but harmless there too)
-                    usleep(1000);
                 }
 
-                $page_count = count($page_rows);
-                $offset    += $page_count;
-
-                // If the page returned fewer rows than requested, we are done
-                if ($page_count < self::SEARCH_PAGE_SIZE) {
+                if ($row_count >= $total_count || $page_count < self::SEARCH_PAGE_SIZE) {
                     break;
                 }
 
-                // Free memory explicitly — the Search result can be large
                 unset($data, $page_rows);
-
             } while (true);
-
         } finally {
-            // Always close the file, even on exception, to avoid handle leaks
             fclose($fp);
-            // Restore the original session state
 
             if ($glpicronuserrunning !== null) {
                 $_SESSION['glpicronuserrunning'] = $glpicronuserrunning;
             }
 
-            
-
-            // self::restoreCronSession($saved_session);
+            $_SESSION = $saved_session;
         }
 
         return [
@@ -1077,8 +994,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
         $period_key  = $file['period_key']  ?? self::getPeriodKey($uniqueness);
         $report_date = $file['report_date'] ?? date('Y-m-d');
 
-        // For DUPLICATE mode every period_key is unique, so we always INSERT.
-        // For DAILY/MONTHLY we check whether a row already exists for this period.
         $existing = $DB->request([
             'FROM'  => $avail_table,
             'WHERE' => [
@@ -1086,11 +1001,8 @@ class PluginSmartreportReportdefination extends CommonDBTM
                 'period_key' => $period_key,
             ],
         ]);
-        
+
         if ($existing->count() > 0 && $uniqueness !== self::UNIQUENESS_DUPLICATE) {
-            // Same period, overwrite mode: UPDATE file metadata, preserve download_count.
-            // The old file on disk is already overwritten by streamCSV() because the
-            // filename is deterministic for the period (same name = same path).
             $result = $DB->update(
                 $avail_table,
                 [
@@ -1115,11 +1027,10 @@ class PluginSmartreportReportdefination extends CommonDBTM
             $mode_label = ($uniqueness === self::UNIQUENESS_MONTHLY) ? 'monthly' : 'daily';
             Toolbox::logInFile(
                 'smartreport',
-                "[SmartReport] {$mode_label} entry updated for report id=$reports_id ".
-                "(period=$period_key) — download_count preserved.\n"
+                "[SmartReport] {$mode_label} entry updated for report id=$reports_id " .
+                    "(period=$period_key) — download_count preserved.\n"
             );
         } else {
-            // INSERT — either a genuinely new period, or DUPLICATE mode.
             $obj = new PluginSmartreportGeneratedreport();
             $id  = $obj->add([
                 'reports_id'     => $reports_id,
@@ -1139,15 +1050,15 @@ class PluginSmartreportReportdefination extends CommonDBTM
                 );
             }
 
-            $mode_label = match($uniqueness) {
+            $mode_label = match ($uniqueness) {
                 self::UNIQUENESS_MONTHLY   => 'monthly',
                 self::UNIQUENESS_DUPLICATE => 'duplicate',
                 default                    => 'daily',
             };
             Toolbox::logInFile(
                 'smartreport',
-                "[SmartReport] New {$mode_label} entry created for report id=$reports_id ".
-                "(period=$period_key).\n"
+                "[SmartReport] New {$mode_label} entry created for report id=$reports_id " .
+                    "(period=$period_key).\n"
             );
         }
     }
@@ -1161,7 +1072,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
     {
         global $DB;
 
-        // Increment on the generatedreport row (per-generation count)
         GlpiVersion::dbQuery(
             "UPDATE `glpi_plugin_smartreport_generatedreports`
              SET `download_count` = `download_count` + 1
@@ -1282,7 +1192,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
             ]);
             foreach ($members as $row) {
                 $email = trim($row['email'] ?? '');
-                // Deduplicate — a user in multiple selected groups gets one entry
                 if ($email !== '' && !isset($recipients[$email])) {
                     $display = trim(($row['firstname'] ?? '') . ' ' . ($row['realname'] ?? ''));
                     $display = $display !== '' ? $display : $row['name'];
@@ -1329,7 +1238,7 @@ class PluginSmartreportReportdefination extends CommonDBTM
         }
 
         // ── Read plugin configuration ─────────────────────────────────────────
-        
+
         $sr_config      = \GlpiPlugin\SmartReport\Config::getConfig();
         $from_email_cfg = trim($sr_config[\GlpiPlugin\SmartReport\Config::CONFIG_KEY_FROM_EMAIL]      ?? '');
         $size_limit_mb  = max(0, (int)($sr_config[\GlpiPlugin\SmartReport\Config::CONFIG_KEY_FILE_SIZE_LIMIT]
@@ -1341,9 +1250,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
         $limit_bytes   = $size_limit_mb * 1024 * 1024;
         $attach_file   = ($size_limit_mb === 0) || ($file_bytes <= $limit_bytes);
 
-        // ── Build absolute download link for the email ───────────────────────
-        // The link points to email_download.php which requires a GLPI session.
-        // Recipients who are not logged in will be prompted to log in first.
         $generated_id  = self::getGeneratedReportId((int)$report['id']);
         $download_link = self::buildAbsoluteDownloadUrl($generated_id);
 
@@ -1357,7 +1263,8 @@ class PluginSmartreportReportdefination extends CommonDBTM
                 '<p>%s</p><p>%s</p><p><a href="%s">%s</a></p>',
                 htmlspecialchars(sprintf(
                     __("Please find attached the smart report \"%s\" generated on %s.", 'smartreport'),
-                    $report['name'], $generated_at
+                    $report['name'],
+                    $generated_at
                 )),
                 htmlspecialchars(__("You can also download it via the link below.", 'smartreport')),
                 htmlspecialchars($download_link),
@@ -1367,7 +1274,8 @@ class PluginSmartreportReportdefination extends CommonDBTM
                 "%s\n\n%s\n%s",
                 sprintf(
                     __("Please find attached the smart report \"%s\" generated on %s.", 'smartreport'),
-                    $report['name'], $generated_at
+                    $report['name'],
+                    $generated_at
                 ),
                 __("You can also download it via the link below:", 'smartreport'),
                 $download_link
@@ -1379,7 +1287,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
                     . "for report id={$report['id']}.\n"
             );
         } else {
-            // ── Link-only email (file exceeds size limit) ─────────────────────
             $file_size_display = PluginSmartreportGeneratedreport::formatFileSizePublic($file_bytes);
             $limit_display     = $size_limit_mb . ' MB';
 
@@ -1387,11 +1294,13 @@ class PluginSmartreportReportdefination extends CommonDBTM
                 '<p>%s</p><p>%s</p><p><a href="%s">%s</a></p>',
                 htmlspecialchars(sprintf(
                     __("The smart report \"%s\" was generated on %s.", 'smartreport'),
-                    $report['name'], $generated_at
+                    $report['name'],
+                    $generated_at
                 )),
                 htmlspecialchars(sprintf(
                     __("The file (%s) exceeds the configured attachment limit (%s) and has not been attached. Please download it using the link below.", 'smartreport'),
-                    $file_size_display, $limit_display
+                    $file_size_display,
+                    $limit_display
                 )),
                 htmlspecialchars($download_link),
                 htmlspecialchars(__("Download Report", 'smartreport'))
@@ -1400,11 +1309,13 @@ class PluginSmartreportReportdefination extends CommonDBTM
                 "%s\n\n%s\n%s",
                 sprintf(
                     __("The smart report \"%s\" was generated on %s.", 'smartreport'),
-                    $report['name'], $generated_at
+                    $report['name'],
+                    $generated_at
                 ),
                 sprintf(
                     __("The file (%s) exceeds the configured attachment limit (%s). Download it here:", 'smartreport'),
-                    $file_size_display, $limit_display
+                    $file_size_display,
+                    $limit_display
                 ),
                 $download_link
             );
@@ -1428,22 +1339,14 @@ class PluginSmartreportReportdefination extends CommonDBTM
 
         $mailer = new GLPIMailer();
 
-        // Resolve From address: plugin config → GLPI notification config → fallback
         $from_email = $from_email_cfg;
         $from_name  = 'GLPI Smart Report';
-
-
-        // Set the From address from GLPI's notification configuration
-        // (Setup → General → Notifications → Administrator email).
-        // GLPIMailer does not populate From automatically — without it
-        // PHPMailer refuses to send with "An email must have a From header".
 
         if ($from_email === '') {
             $sender     = GlpiVersion::getEmailSender();
             $from_email = $sender['email'];
             $from_name  = $sender['name'] ?: 'GLPI Smart Report';
         }
-
 
         if ($from_email === '') {
             global $CFG_GLPI;
@@ -1454,7 +1357,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
         if ($from_email !== '') {
             $mailer->setFrom($from_email, $from_name ?: 'GLPI Smart Report');
         }
-
 
         $mailer->Subject = $subject;
         $mailer->Body    = $body_html;
@@ -1475,11 +1377,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
             $mailer->AddBCC($bcc_email, $recipients[$bcc_email]);
         }
 
-        Toolbox::logInFile(
-                    'smartreport',
-                    "inside 1 \n"
-
-                );
         $bcc_count = count($bcc_emails);
 
         try {
@@ -1546,7 +1443,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
     {
         global $DB;
 
-        // retention_period = 0 means "keep forever" — nothing to do
         if ($retention_days <= 0) {
             return;
         }
@@ -1565,7 +1461,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
         $deleted_rows  = 0;
 
         foreach ($expired as $row) {
-            // Delete the physical CSV file first
             $path = $row['file_path'] ?? '';
             if ($path !== '' && file_exists($path)) {
                 if (@unlink($path)) {
@@ -1651,251 +1546,22 @@ class PluginSmartreportReportdefination extends CommonDBTM
         );
     }
 
-        /**
-     * Populate the minimum $_SESSION keys that Search::getDatas() requires in
-     * GLPI 10 when running outside a web request (cron / CLI context).
+     /**  
+     * Bootstrap a superadmin session context so Search::getDatas() returns all
+     * records without the (0=1) visibility restriction that GLPI adds for
+     * non-superadmin users when they have no assigned tickets or group memberships.
      *
-     * WHY THIS IS NEEDED
-     * ──────────────────
-     * Search::addDefaultJoin() and Search::constructSQL() in GLPI 10 read
-     * $_SESSION['glpiname'] and $_SESSION['glpigroups'] unconditionally to build
-     * per-user / per-group visibility JOIN and WHERE clauses. In a web session
-     * these are populated by Session::init(). In a cron context GLPI only sets up
-     * the DB and config — $_SESSION exists but those keys are absent, producing:
+     * Also sets $_SESSION['glpilist_limit'] = SEARCH_PAGE_SIZE so GLPI 10's
+     * Search honours our page size (it ignores the equivalent key in $params).
      *
-     *   PHP Warning: Undefined array key "glpiname"  in Search.php
-     *   PHP Warning: Undefined array key "glpigroups" in Search.php
-     *
-     * The JOIN clause built from those undefined keys is malformed and matches
-     * nothing, so Search returns zero data rows — only headers appear in the CSV.
-     *
-     * THE FIX
-     * ───────
-     * Before calling Search::getDatas() we populate the missing keys using the
-     * report's stored users_id. The full set of keys matches what Session::init()
-     * sets for a logged-in user.  After Search returns we restore $_SESSION
-     * exactly to its prior state via restoreCronSession().
-     *
-     * This is the same pattern GLPI itself uses in SavedSearch::cronSavedSearch()
-     * and SavedSearch alert processing.
-     *
-     * @param  int   $users_id   Report's stored creator user ID (0 → first super-admin)
-     * @return array             Snapshot of $_SESSION before modification
-     */
-    // private static function initCronSession(int $users_id): void
-    // {
-    //     global $DB, $CFG_GLPI;
-
-    //     // If running under a real web session the keys are already populated.
-    //     // Nothing to do — the saved_session snapshot in streamCSV() will still
-    //     // capture and restore correctly.
-    //     if (!isCommandLine() && !empty($_SESSION['glpiname'])) {
-    //         return;
-    //     }
-
-    //     // ── Resolve which user to run the search as ───────────────────────────
-    //     // Prefer the user who created/owns the report. Fall back to the first
-    //     // active super-admin user so the search has maximum visibility.
-    //     $user_row = null;
-
-    //     if ($users_id > 0) {
-    //         $rows = $DB->request([
-    //             'SELECT' => ['id', 'name', 'firstname', 'realname', 'language'],
-    //             'FROM'   => 'glpi_users',
-    //             'WHERE'  => ['id' => $users_id, 'is_active' => 1, 'is_deleted' => 0],
-    //             'LIMIT'  => 1,
-    //         ]);
-    //         foreach ($rows as $r) {
-    //             $user_row = $r;
-    //         }
-    //     }
-
-    //     if ($user_row === null) {
-    //         // Fall back: find the first active user with super-admin profile
-    //         $admin_profile_id = null;
-    //         $profiles = $DB->request([
-    //             'SELECT' => ['id'],
-    //             'FROM'   => 'glpi_profiles',
-    //             'WHERE'  => ['interface' => 'central'],
-    //             'LIMIT'  => 1,
-    //         ]);
-    //         foreach ($profiles as $p) {
-    //             $admin_profile_id = (int)$p['id'];
-    //         }
-
-    //         if ($admin_profile_id !== null) {
-    //             $fallback = $DB->request([
-    //                 'SELECT'    => ['glpi_users.id', 'glpi_users.name', 'glpi_users.firstname',
-    //                                 'glpi_users.realname', 'glpi_users.language'],
-    //                 'FROM'      => 'glpi_users',
-    //                 'LEFT JOIN' => [
-    //                     'glpi_profiles_users' => [
-    //                         'ON' => [
-    //                             'glpi_users'          => 'id',
-    //                             'glpi_profiles_users' => 'users_id',
-    //                         ],
-    //                     ],
-    //                 ],
-    //                 'WHERE' => [
-    //                     'glpi_users.is_active'    => 1,
-    //                     'glpi_users.is_deleted'   => 0,
-    //                     'glpi_profiles_users.profiles_id' => $admin_profile_id,
-    //                 ],
-    //                 'LIMIT' => 1,
-    //             ]);
-    //             foreach ($fallback as $r) {
-    //                 $user_row = $r;
-    //             }
-    //         }
-    //     }
-
-    //     if ($user_row === null) {
-    //         Toolbox::logInFile(
-    //             'smartreport',
-    //             "[SmartReport] initCronSession: could not resolve a user — search may return no rows.\n"
-    //         );
-    //         return;
-    //     }
-
-    //     $uid = (int)$user_row['id'];
-
-    //     // ── Resolve group memberships ─────────────────────────────────────────
-    //     $groups = [];
-    //     $gRows  = $DB->request([
-    //         'SELECT' => ['groups_id'],
-    //         'FROM'   => 'glpi_groups_users',
-    //         'WHERE'  => ['users_id' => $uid],
-    //     ]);
-    //     foreach ($gRows as $g) {
-    //         $groups[] = (int)$g['groups_id'];
-    //     }
-
-    //     // ── Resolve active profile ────────────────────────────────────────────
-    //     $profile_id = 0;
-    //     $pRows = $DB->request([
-    //         'SELECT' => ['profiles_id'],
-    //         'FROM'   => 'glpi_profiles_users',
-    //         'WHERE'  => ['users_id' => $uid],
-    //         'ORDER'  => 'id ASC',
-    //         'LIMIT'  => 1,
-    //     ]);
-    //     foreach ($pRows as $p) {
-    //         $profile_id = (int)$p['profiles_id'];
-    //     }
-
-    //     $profile = [];
-    //     if ($profile_id > 0) {
-    //         $pdata = $DB->request([
-    //             'FROM'  => 'glpi_profiles',
-    //             'WHERE' => ['id' => $profile_id],
-    //             'LIMIT' => 1,
-    //         ]);
-    //         foreach ($pdata as $pd) {
-    //             $profile = $pd;
-    //         }
-    //     }
-
-    //     // ── Resolve accessible entities ───────────────────────────────────────
-    //     $entities = [0];   // entity 0 is always accessible
-    //     $eRows = $DB->request([
-    //         'SELECT' => ['entities_id'],
-    //         'FROM'   => 'glpi_profiles_users',
-    //         'WHERE'  => ['users_id' => $uid],
-    //     ]);
-    //     foreach ($eRows as $e) {
-    //         $entities[] = (int)$e['entities_id'];
-    //     }
-    //     $entities = array_values(array_unique($entities));
-
-    //     // ── Populate $_SESSION keys that Search requires ──────────────────────
-    //     $_SESSION['glpiID']            = $uid;
-    //     $_SESSION['glpiname']          = $user_row['name']      ?? '';
-    //     $_SESSION['glpifirstname']     = $user_row['firstname'] ?? '';
-    //     $_SESSION['glpirealname']      = $user_row['realname']  ?? '';
-    //     $_SESSION['glpigroups']        = $groups;
-    //     $_SESSION['glpiactiveprofile'] = $profile;
-    //     $_SESSION['glpiprofiles']      = $profile_id > 0 ? [$profile_id => $profile] : [];
-
-    //     // Entity scope: all entities the user can access
-    //     $_SESSION['glpiactiveentities']        = $entities;
-    //     $_SESSION['glpiactiveentities_string'] = implode(',', $entities);
-    //     $_SESSION['glpiactive_entity']         = $entities[0];
-    //     $_SESSION['glpiactive_entity_recursive']= 1;
-
-    //     // Language for translated field names in headers
-    //     $_SESSION['glpilanguage'] = $user_row['language']
-    //         ?? ($CFG_GLPI['language'] ?? 'en_GB');
-
-    //     // Used by some GLPI 10 helpers
-    //     $_SESSION['glpi_use_mode']  = Session::NORMAL_MODE;
-    //     $_SESSION['glpiis_ids_visible'] = 0;
-
-    //     Toolbox::logInFile(
-    //         'smartreport',
-    //         "[SmartReport] initCronSession: running search as user id=$uid name={$_SESSION['glpiname']}"
-    //             . " groups=[" . implode(',', $groups) . "]"
-    //             . " entities=[" . implode(',', $entities) . "]\n"
-    //     );
-    // }
-
-
-        /**
-     * Populate the minimum $_SESSION keys that Search::getDatas() requires in
-     * GLPI 10 when running outside a web request (cron / CLI context).
-     *
-     * WHY THIS IS NEEDED
-     * ──────────────────
-     * Search::addDefaultJoin() and Search::constructSQL() in GLPI 10 read
-     * $_SESSION['glpiname'] and $_SESSION['glpigroups'] unconditionally to build
-     * per-user / per-group visibility JOIN and WHERE clauses. In a web session
-     * these are populated by Session::init(). In a cron context GLPI only sets up
-     * the DB and config — $_SESSION exists but those keys are absent, producing:
-     *
-     *   PHP Warning: Undefined array key "glpiname"  in Search.php
-     *   PHP Warning: Undefined array key "glpigroups" in Search.php
-     *
-     * The JOIN clause built from those undefined keys is malformed and matches
-     * nothing, so Search returns zero data rows — only headers appear in the CSV.
-     *
-     * THE FIX
-     * ───────
-     * Before calling Search::getDatas() we populate the missing keys using the
-     * report's stored users_id. The full set of keys matches what Session::init()
-     * sets for a logged-in user.  After Search returns we restore $_SESSION
-     * exactly to its prior state via restoreCronSession().
-     *
-     * This is the same pattern GLPI itself uses in SavedSearch::cronSavedSearch()
-     * and SavedSearch alert processing.
-     *
-     * @param  int   $users_id   Report's stored creator user ID (0 → first super-admin)
-     * @return array             Snapshot of $_SESSION before modification
+     * Must be called after all other Session:: calls because changeActiveEntities()
+     * resets glpilist_limit back to $CFG_GLPI['list_limit'].
      */
 
     private static function initCronSession(): void
     {
-        global $DB, $CFG_GLPI;
+        global $DB;
 
-        // ── WHY WE ALWAYS USE A SUPERADMIN ────────────────────────────────────
-        // GLPI 10's Search::addDefaultJoin() generates a visibility guard for
-        // itemtypes like Ticket:
-        //
-        //   WHERE (0=1)   ← if user has no tickets and no groups
-        //   WHERE (`requester`.`users_id` = X OR `assignee`.`users_id` = X OR ...)
-        //
-        // A "normal" user (even the report creator) gets (0=1) when they have
-        // no assigned tickets and no group memberships — the entire query returns
-        // zero rows even though the data exists.
-        //
-        // A superadmin user (is_superadmin=1 in their profile) bypasses this
-        // visibility guard entirely — GLPI omits the (0=1) condition for them.
-        //
-        // Solution: always run cron searches as a superadmin. This gives the
-        // correct behaviour for a scheduled report, which is an admin-level
-        // operation that should see all data regardless of ticket assignments.
-
-        // ── Find the first active superadmin user ─────────────────────────────
-        // We join glpi_profiles on is_superadmin=1 to guarantee we get a user
-        // whose profile causes GLPI to skip the visibility restriction.
         $user_row = null;
 
         $rows = $DB->request([
@@ -1951,7 +1617,7 @@ class PluginSmartreportReportdefination extends CommonDBTM
         Session::initEntityProfiles($uid);
         Session::changeProfile($profile_id);
         Session::changeActiveEntities((int)$user_row['entities_id']);
-        
+
         $_SESSION['glpilist_limit'] = self::SEARCH_PAGE_SIZE;
 
         Toolbox::logInFile(
@@ -1961,16 +1627,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
         );
     }
 
-    /**
-     * Restore $_SESSION to the snapshot taken before initCronSession() was called.
-     *
-     * @param array $saved  The snapshot ($saved_session) captured in streamCSV()
-     */
-    private static function restoreCronSession(array $saved): void
-    {
-        $_SESSION = $saved;
-    }
-    
     /**
      * Build a fully-qualified download URL for embedding in emails.
      * Uses GLPI's configured URL root so the link works regardless of server config.
@@ -1986,10 +1642,6 @@ class PluginSmartreportReportdefination extends CommonDBTM
             . '?id=' . urlencode((string)$generated_id);
     }
 
-    // =========================================================================
-    // DB helpers
-    // =========================================================================
-
     private static function setStatus(int $id, int $status): void
     {
         global $DB;
@@ -2003,13 +1655,13 @@ class PluginSmartreportReportdefination extends CommonDBTM
     }
 
     public static function getSpecificValueToDisplay($field, $values, array $options = [])
-    {       
-        switch($field){
-            case 'frequency': 
+    {
+        switch ($field) {
+            case 'frequency':
                 $tab = self::getFrequencyArray();
                 return $tab[$values[$field]];
-            case 'status': 
-                if($values[$field]){
+            case 'status':
+                if ($values[$field]) {
                     return 'Scheduled';
                 } else {
                     return 'Disabled';
@@ -2018,20 +1670,20 @@ class PluginSmartreportReportdefination extends CommonDBTM
                 $tab = self::getRetentionArray();
                 return $tab[$values[$field]];
             case 'lastrun':
-                if($values[$field] > 0){
+                if ($values[$field] > 0) {
                     return $values[$field];
-                } else {                    
+                } else {
                     return "Never";
                 }
             case 'next_run':
-                if($values[$field] > 0){
+                if ($values[$field] > 0) {
                     return Html::convDateTime(date('Y-m-d H:i:s', (int)$values[$field]));
                 } else {
                     return "As soon as possible";
                 }
             case 'uniqueness':
                 $tab = self::getUniquenessArray();
-                return $tab[(int)$values[$field]] ?? $tab[self::UNIQUENESS_DAILY];  
+                return $tab[(int)$values[$field]] ?? $tab[self::UNIQUENESS_DAILY];
         }
 
         return parent::getSpecificValueToDisplay($field, $values, $options);

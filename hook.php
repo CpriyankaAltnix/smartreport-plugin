@@ -91,7 +91,7 @@ function plugin_smartreport_uninstall(): bool
 
     echo "<center>";
     echo "<table class='tab_cadre_fixe'>";
-    echo "<tr><th>" . __("MySQL tables uninstallation", "fields") . "<th></tr>";
+    echo "<tr><th>" . __("MySQL tables uninstallation", "smartreport") . "<th></tr>";
     echo "<tr class='tab_bg_1'>";
     echo "<td align='center'>";
 

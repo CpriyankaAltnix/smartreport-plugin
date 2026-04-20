@@ -17,12 +17,9 @@
  * Because this page only returns HTML (never a file), email prefetching is
  * harmless. The actual download only happens on an explicit user click.
  *
- * Access: no GLPI session required — the signed token is the only credential.
+ * Access: requires a valid GLPI session. Recipients are redirected to login first.
  */
 
-// Bootstrap GLPI for DB access, constants, and class loading.
-// We do NOT call Session::checkLoginUser() — this page is designed for
-// recipients who arrive directly from an email without a GLPI session.
 include('../../../inc/includes.php');
 include_once(__DIR__ . '/../inc/glpiversion.class.php');
 
@@ -92,8 +89,6 @@ $download_url = Plugin::getWebDir('smartreport')
     . '&_glpi_csrf_token=' . urlencode(Session::getNewCSRFToken());
 
 
-
-
 // ── Render the landing page ───────────────────────────────────────────────────
 render_landing_page(
     $report_obj->fields['name']        ?? '',
@@ -104,10 +99,6 @@ render_landing_page(
     $download_url
 );
 exit;
-
-// =============================================================================
-// Page rendering helpers
-// =============================================================================
 
 function format_size(int $bytes): string
 {
@@ -149,7 +140,6 @@ function render_landing_page(
                 . '</div>'
         );
 
-        // echo render_html_shell($title, $body);
         return;
     }
 

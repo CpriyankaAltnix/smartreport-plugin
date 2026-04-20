@@ -1,18 +1,13 @@
 <?php
 
-
-// GlpiVersion — single place for all GLPI 10 vs 11 compatibility shims.
-
 class GlpiVersion
 {
-    /** Cache the parsed major version so we only compute it once per request. */
-    /** @var int|null cached major version number */
+    /** @var int|null Cached major version — computed once per request. */
     private static $major = null;
 
     public static function getMajor(): int
     {
         if (self::$major === null) {
-            // GLPI_VERSION is defined by GLPI core (e.g. "10.0.15" or "11.0.0")
             self::$major = (int)explode('.', GLPI_VERSION)[0];
         }
         return self::$major;
@@ -31,8 +26,7 @@ class GlpiVersion
     /**
      * Return ['email' => string, 'name' => string] for the configured sender.
      *
-     * GLPI 11: if the Config::getEmailSender() exists and is the canonical 
-     * API then go with it otherwise — read directly from $CFG_GLPI.
+     * GLPI 11 exposes Config::getEmailSender(); fall back to $CFG_GLPI for GLPI 10.
      */
     public static function getEmailSender(): array
     {
@@ -119,26 +113,21 @@ class GlpiVersion
         }
 
         \Glpi\Application\View\TemplateRenderer::getInstance()->display(
-                '@smartreport/smartreport_form_glpi10.html.twig',
-                [
-                    'item'               => $item,
-                    'widgets'            => $widgets,
-                    'current_users_id'   => Session::getLoginUserID(),
-                    'display_actortypes' => ['requester'],
-                    'item_meta'          => $meta,
-                    // Pass Execute right check to Twig — avoids calling PHP statics from template
-                    'can_execute'        => Session::haveRight(
-                        PluginSmartreportReportdefination::$rightname,
-                        PluginSmartreportReportdefination::EXECUTE
-                    ),
-                ]
-            );
+            '@smartreport/smartreport_form_glpi10.html.twig',
+            [
+                'item'               => $item,
+                'widgets'            => $widgets,
+                'current_users_id'   => Session::getLoginUserID(),
+                'display_actortypes' => ['requester'],
+                'item_meta'          => $meta,
+                // Pass Execute right check to Twig — avoids calling PHP statics from template
+                'can_execute'        => Session::haveRight(
+                    PluginSmartreportReportdefination::$rightname,
+                    PluginSmartreportReportdefination::EXECUTE
+                ),
+            ]
+        );
         return;
-
-        // ── GLPI 10: include dedicated PHP template ────────────────────────
-        // The template lives in templates/smartreport_form_glpi10.php.
-        // It has access to $item, $widgets, and $meta via the calling scope.
-        // include Plugin::getPhpDir('smartreport') . '/templates/smartreport_form_glpi10.php';
     }
 
     /**
@@ -161,5 +150,4 @@ class GlpiVersion
         // GLPI 10 fallback — DB::query() has existed since GLPI 0.x
         return $DB->query($sql);
     }
-
 }
