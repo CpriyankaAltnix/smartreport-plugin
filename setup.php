@@ -31,8 +31,16 @@
  * -------------------------------------------------------------------------
  */
 
+use GlpiPlugin\Smartreport\Reportdefination;
+use GlpiPlugin\Smartreport\Generatedreport;
+use GlpiPlugin\Smartreport\Menu;
+use GlpiPlugin\Smartreport\Config;
+use GlpiPlugin\Smartreport\Profile;
+// use GlpiPlugin\Smartreport\QueueMonitor;
+use GlpiPlugin\Smartreport\Reportqueue;
+
 /** @phpstan-ignore theCodingMachineSafe.function (safe to assume this isn't already defined) */
-define('PLUGIN_SMARTREPORT_VERSION', '0.0.1');
+define('PLUGIN_SMARTREPORT_VERSION', '0.0.1'); // CS: set version to 1.0.0-beta1 and check for update on plugin card
 
 // Minimal GLPI version, inclusive
 /** @phpstan-ignore theCodingMachineSafe.function (safe to assume this isn't already defined) */
@@ -60,29 +68,72 @@ function plugin_init_smartreport(): void
 
     $PLUGIN_HOOKS['csrf_compliant']['smartreport'] = true;
 
+    Plugin::registerClass(Generatedreport::class);
+    Plugin::registerClass(Menu::class);
+    Plugin::registerClass(Reportdefination::class);
+    // Plugin::registerClass(QueueMonitor::class, ['addtabon' => [Reportdefination::class]]);
+    Plugin::registerClass(Reportqueue::class);
+
     if ((Session::getLoginUserID() || isCommandLine()) && Plugin::isPluginActive('smartreport')) {
         if (Session::haveRight('config', READ)) {
-            $PLUGIN_HOOKS['menu_toadd']['smartreport'] = ['config' => PluginSmartreportMenu::class];
+            $PLUGIN_HOOKS['menu_toadd']['smartreport'] = ['config' => Menu::class];
         }
 
-        Plugin::registerClass(PluginSmartreportProfile::class, ['addtabon' => ['Profile']]);
-        Plugin::registerClass(PluginSmartreportGeneratedreport::class);
-        Plugin::registerClass(\GlpiPlugin\SmartReport\Config::class, ['addtabon' => ['Config']]);
+        // Plugin::registerClass(PluginSmartreportProfile::class, ['addtabon' => ['Profile']]);
+        Plugin::registerClass(Profile::class, ['addtabon' => ['Profile']]);
+        
+        
+        Plugin::registerClass(Config::class, ['addtabon' => ['Config']]);
     }
 
     CronTask::register(
-        'PluginSmartreportReportdefination',
-        'runSmartReports',
+        Reportdefination::class,
+        'scheduleReports',
         MINUTE_TIMESTAMP * 5,
         [
             'mode'    => CronTask::MODE_EXTERNAL,
-            'comment' => __('Run automatic reports', 'smartreport'),
+            'comment' => __('SmartReport scheduler: enqueue due reports', 'smartreport'),
         ]
     );
 
+    // Three independent worker slots — each claims and executes one queued job.
+    // Registering them as separate CronTask rows lets GLPI run them in parallel
+    // across overlapping cron.php invocations (each row has its own status lock).
+
+    // CS: review from ashish sir on multiple worker cron
+    CronTask::register(
+        Reportdefination::class,
+        'workerSlot1',
+        MINUTE_TIMESTAMP,
+        [
+            'mode'    => CronTask::MODE_EXTERNAL,
+            'comment' => __('SmartReport worker — slot 1', 'smartreport'),
+        ]
+    );
+    // CronTask::register(
+    //     Reportdefination::class,
+    //     'workerSlot2',
+    //     MINUTE_TIMESTAMP,
+    //     [
+    //         'mode'    => CronTask::MODE_EXTERNAL,
+    //         'comment' => __('SmartReport worker — slot 2', 'smartreport'),
+    //     ]
+    // );
+    // CronTask::register(
+    //     Reportdefination::class,
+    //     'workerSlot3',
+    //     MINUTE_TIMESTAMP,
+    //     [
+    //         'mode'    => CronTask::MODE_EXTERNAL,
+    //         'comment' => __('SmartReport worker — slot 3', 'smartreport'),
+    //     ]
+    // );
+
     // Load compatibility layer
-    require_once __DIR__ . '/inc/glpiversion.class.php';
-    require_once __DIR__ . '/src/Config.php';
+    // CS: need to check for fesibility to remove this lines
+    // require_once __DIR__ . '/inc/glpiversion.class.php';
+    // require_once __DIR__ . '/inc/reportqueue.class.php';
+    // require_once __DIR__ . '/src/Config.php';
 }
 
 /**

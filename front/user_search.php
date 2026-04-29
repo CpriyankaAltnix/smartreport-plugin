@@ -7,8 +7,11 @@
  * Returns data in Select2 format with infinite scroll support.
  */
 
+use GlpiPlugin\Smartreport\Glpiversion;
+
+// CS: make it as per latest standards
 include('../../../inc/includes.php');
-include_once(__DIR__ . '/../inc/glpiversion.class.php');
+// include_once(__DIR__ . '/../inc/glpiversion.class.php');
 
 Session::checkLoginUser();
 

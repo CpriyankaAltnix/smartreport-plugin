@@ -9,8 +9,12 @@
  * Requires valid session and report access.
  */
 
+use GlpiPlugin\Smartreport\Generatedreport;
+use GlpiPlugin\Smartreport\Reportdefination;
+
+// CS: make it as per latest standards
 include('../../../inc/includes.php');
-include_once(__DIR__ . '/../inc/glpiversion.class.php');
+// include_once(__DIR__ . '/../inc/glpiversion.class.php');
 
 Session::checkLoginUser();
 
@@ -18,6 +22,7 @@ $id    = (int)($_GET['id']    ?? 0);
 
 // Validate parameters
 if ($id <= 0) {
+    // CS: make this as per glpi standards
     http_response_code(400);
     render_error_page(
         __('Invalid Link', 'smartreport'),
@@ -27,8 +32,9 @@ if ($id <= 0) {
 }
 
 // Load report metadata for display
-$generated = new PluginSmartreportGeneratedreport();
+$generated = new Generatedreport();
 if (!$generated->getFromDB($id)) {
+    // CS: make this as per glpi standards
     http_response_code(404);
     render_error_page(
         __('Report Not Found', 'smartreport'),
@@ -37,8 +43,9 @@ if (!$generated->getFromDB($id)) {
     exit;
 }
 
-$report_obj = new PluginSmartreportReportdefination();
+$report_obj = new Reportdefination();
 if (!$report_obj->getFromDB($generated->fields['reports_id'])) {
+    // CS: make this as per glpi standards
     http_response_code(404);
     render_error_page(
         __('Report Not Found', 'smartreport'),
@@ -48,6 +55,7 @@ if (!$report_obj->getFromDB($generated->fields['reports_id'])) {
 }
 
 if (!$report_obj->canViewItem()) {
+    // CS: make this as per glpi standards
     http_response_code(403);
     render_error_page(
         __('Access Denied', 'smartreport'),
@@ -73,6 +81,7 @@ if ($file_ok) {
 $download_url = Plugin::getWebDir('smartreport')
     . '/front/download.php'
     . '?id='              . urlencode((string)$id)
+    . '&external=true'
     . '&_glpi_csrf_token=' . urlencode(Session::getNewCSRFToken());
 
 

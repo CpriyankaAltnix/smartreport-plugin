@@ -9,6 +9,11 @@
         },
         "sort-packages": true
     },
+     "autoload": {
+        "psr-4": {
+            "GlpiPlugin\\Smartreport\\": "src/"
+        }
+    },
     "autoload-dev": {
         "psr-4": {
             "GlpiPlugin\\SmartReport\\Tests\\": "tests/"

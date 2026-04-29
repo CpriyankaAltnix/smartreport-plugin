@@ -11,8 +11,12 @@
  * Increments download count only after successful transfer.
  */
 
+use GlpiPlugin\Smartreport\Generatedreport;
+use GlpiPlugin\Smartreport\Reportdefination;
+
+// CS: make it as per latest standards
 include('../../../inc/includes.php');
-include_once(__DIR__ . '/../inc/glpiversion.class.php');
+// include_once(__DIR__ . '/../inc/glpiversion.class.php');
 
 // Session & CSRF validation 
 Session::checkLoginUser();
@@ -27,13 +31,13 @@ if ($id <= 0) {
 }
 
 // Load generated report
-$available = new PluginSmartreportGeneratedreport();
+$available = new Generatedreport();
 if (!$available->getFromDB($id)) {
     Html::displayErrorAndDie(__('Report not found', 'smartreport'), true);
 }
 
 // Check access on parent report
-$parent = new PluginSmartreportReportdefination();
+$parent = new Reportdefination();
 if (!$parent->getFromDB($available->fields['reports_id'])) {
     Html::displayErrorAndDie(__('Report not found', 'smartreport'), true);
 }
@@ -75,7 +79,7 @@ readfile($real_path);
 // Update download count if completed
 if ($external == '') {
     if (!connection_aborted()) {
-        PluginSmartreportReportdefination::incrementDownloadCount(
+        Reportdefination::incrementDownloadCount(
             $id,
             (int)$available->fields['reports_id']
         );

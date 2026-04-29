@@ -1,14 +1,17 @@
 <?php
 
-/**
- * SmartReport - Generated reports handler
- *
- * Manages generated report records and display in report tabs.
- */
+namespace GlpiPlugin\Smartreport;
 
-class PluginSmartreportGeneratedreport extends CommonDBChild
+use CommonGLPI;
+use Html;
+use Session;
+use GlpiPlugin\Smartreport\Reportdefination;
+use GlpiPlugin\Smartreport\Glpiversion;
+
+class Generatedreport extends \CommonDBChild
 {
-    public static $itemtype = 'PluginSmartreportReportdefination';
+
+    public static $itemtype = Reportdefination::class;
     public static $items_id = 'reports_id';
 
     public static function getTypeName($nb = 0)
@@ -18,7 +21,7 @@ class PluginSmartreportGeneratedreport extends CommonDBChild
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
     {
-        if ($item->getType() !== 'PluginSmartreportReportdefination') {
+        if ($item->getType() !== Reportdefination::class) {
             return '';
         }
 
@@ -32,7 +35,7 @@ class PluginSmartreportGeneratedreport extends CommonDBChild
 
     public static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0)
     {
-        if ($item->getType() !== 'PluginSmartreportReportdefination') {
+        if ($item->getType() !== Reportdefination::class) {
             return false;
         }
 
@@ -41,17 +44,22 @@ class PluginSmartreportGeneratedreport extends CommonDBChild
     }
 
     // List generated reports for a report
-    public static function showForReport(PluginSmartreportReportdefination $item): void
+    public static function showForReport(Reportdefination $item): void
     {
         global $DB;
 
         $report_id = $item->getID();
 
+        \Toolbox::logInFile(
+                        'smartreport',
+                        " report_id - " . $report_id . "\n"
+                    );
+
         $iterator = $DB->request([
             'FROM'  => self::getTable(),
             'WHERE' => ['reports_id' => $report_id],
             'ORDER' => ['report_date DESC'],
-        ]);
+        ]);        
 
         // Cumulative lifetime download count from the parent report
         $lifetime_downloads = (int)($item->fields['download_count'] ?? 0);
@@ -85,7 +93,7 @@ class PluginSmartreportGeneratedreport extends CommonDBChild
 
         foreach ($iterator as $row) {
             $file_exists  = !empty($row['file_path']) && file_exists($row['file_path']);
-            $download_url = Plugin::getWebDir('smartreport') . '/front/download.php'
+            $download_url = \Plugin::getWebDir('smartreport') . '/front/download.php'
                 . '?id=' . (int)$row['id']
                 . '&_glpi_csrf_token=' . Session::getNewCSRFToken();
 
@@ -101,11 +109,11 @@ class PluginSmartreportGeneratedreport extends CommonDBChild
                     $file_size = self::formatFileSize($bytes);
                 }
             }
-
+            
             echo "<tr class='{$row_class}'>";
             echo "<td>"
                 . htmlspecialchars($row['report_date'] ?? '')
-                . ($is_today ? " <span class='badge " . (GlpiVersion::isGlpi11() ? 'bg-success ms-1' : 'badge-success') . "'>" . __('Today') . "</span>" : '')
+                . ($is_today ? " <span class='badge " . (Glpiversion::isGlpi11() ? 'bg-success ms-1' : 'badge-success') . "'>" . __('Today') . "</span>" : '')
                 . "</td>";
             echo "<td>" . htmlspecialchars($row['file_name'] ?? '') . "</td>";
             echo "<td>" . $file_size . "</td>";
@@ -113,13 +121,13 @@ class PluginSmartreportGeneratedreport extends CommonDBChild
             echo "<td>" . (int)$row['download_count'] . "</td>";
             echo "<td>";
             if ($file_exists) {
-                $icon_dl  = GlpiVersion::isGlpi11() ? "ti ti-download" : "fas fa-download";
+                $icon_dl  = Glpiversion::isGlpi11() ? "ti ti-download" : "fas fa-download";
                 echo "<a href='" . htmlspecialchars($download_url) . "' class='btn btn-sm btn-primary'>"
                     . "<i class='" . $icon_dl . " me-1'></i>"
                     . __('Download')
                     . "</a>";
             } else {
-                $icon_off = GlpiVersion::isGlpi11() ? "ti ti-file-off" : "fas fa-times-circle";
+                $icon_off = Glpiversion::isGlpi11() ? "ti ti-file-off" : "fas fa-times-circle";
                 echo "<span class='text-muted'>"
                     . "<i class='" . $icon_off . " me-1'></i>"
                     . __('File not found')
@@ -131,6 +139,12 @@ class PluginSmartreportGeneratedreport extends CommonDBChild
 
         echo "</table>";
         echo "</div>";
+    }
+
+    // Public alias for file size
+    public static function formatFileSizePublic(int $bytes): string
+    {
+        return self::formatFileSize($bytes);
     }
 
     // Format file size
@@ -146,12 +160,6 @@ class PluginSmartreportGeneratedreport extends CommonDBChild
             return number_format($bytes / 1024, 2) . ' KB';
         }
         return $bytes . ' B';
-    }
-
-    // Public alias for file size
-    public static function formatFileSizePublic(int $bytes): string
-    {
-        return self::formatFileSize($bytes);
     }
 
     public function rawSearchOptions()

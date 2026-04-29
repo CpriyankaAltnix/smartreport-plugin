@@ -1,12 +1,17 @@
 <?php
 
+use GlpiPlugin\Smartreport\Menu;
+use GlpiPlugin\Smartreport\Reportdefination;
+
+// CS: make it as per latest standards
 include('../../../inc/includes.php');
-include_once(__DIR__ . '/../inc/glpiversion.class.php');
+// include_once(__DIR__ . '/../inc/glpiversion.class.php');
 
 Session::checkRight('plugin_smartreport', READ);
 
-$report = new PluginSmartreportReportdefination();
+$report = new Reportdefination();
 
+// CS: follow else if sequence refering from other .form.php files
 // Save / Update
 if (isset($_POST['add'])) {
     $report->check(-1, CREATE, $_POST);
@@ -37,10 +42,10 @@ if (isset($_POST['resetstate'])) {
     $id = (int)($_POST['id'] ?? 0);
     $report->check($id, UPDATE, $_POST);
     $report->getFromDB($id);
-    if ((int)$report->fields['status'] === PluginSmartreportReportdefination::STATE_RUNNING) {
+    if ((int)$report->fields['status'] === Reportdefination::STATE_RUNNING) {
         $report->update([
             'id'     => $id,
-            'status' => PluginSmartreportReportdefination::STATE_WAITING,
+            'status' => Reportdefination::STATE_WAITING,
         ]);
     }
     Html::back();
@@ -51,7 +56,7 @@ if (isset($_POST['execute'])) {
     $id = (int)($_POST['id'] ?? 0);
 
     // Execute requires the dedicated Execute right, not just UPDATE
-    if (!Session::haveRight(PluginSmartreportReportdefination::$rightname, PluginSmartreportReportdefination::EXECUTE)) {
+    if (!Session::haveRight(Reportdefination::$rightname, Reportdefination::EXECUTE)) {
         Session::addMessageAfterRedirect(
             __('You do not have permission to execute reports.', 'smartreport'),
             false,
@@ -66,7 +71,7 @@ if (isset($_POST['execute'])) {
         Html::back();
     }
 
-    if ((int)$report->fields['status'] === PluginSmartreportReportdefination::STATE_RUNNING) {
+    if ((int)$report->fields['status'] === Reportdefination::STATE_RUNNING) {
         Session::addMessageAfterRedirect(
             __('This report is already running. Please wait for it to complete.', 'smartreport'),
             false,
@@ -76,7 +81,7 @@ if (isset($_POST['execute'])) {
     }
 
     try {
-        PluginSmartreportReportdefination::executeReportById($id);
+        Reportdefination::executeReportById($id);
         Session::addMessageAfterRedirect(
             sprintf(__('Report "%s" generated successfully.', 'smartreport'), $report->fields['name']),
             false,
@@ -95,12 +100,18 @@ if (isset($_POST['execute'])) {
 }
 
 // Display
-Html::header(
-    __('Smart Report', 'smartreport'),
-    $_SERVER['PHP_SELF'],
-    'config',
-    'PluginSmartreportMenu'
-);
+// Html::header(
+//     __('Smart Report', 'smartreport'),
+//     $_SERVER['PHP_SELF'],
+//     'config',
+//     'PluginSmartreportMenu'
+// );
+
+if ($_SESSION['glpiactiveprofile']['interface'] == 'central') {
+    Html::header(__('Smart Report', 'smartreport'), $_SERVER['PHP_SELF'], 'config', Menu::class, '');
+} else {
+    Html::helpHeader(__('Smart Report', 'smartreport'), $_SERVER['PHP_SELF']);
+}
 
 if (!isset($_GET['id']) || $_GET['id'] <= 0) {
     Session::checkRight('plugin_smartreport', CREATE);

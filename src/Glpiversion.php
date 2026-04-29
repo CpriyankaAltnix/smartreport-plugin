@@ -6,7 +6,13 @@
  * Provides version checks and compatibility helpers for GLPI 10/11.
  */
 
-class GlpiVersion
+namespace GlpiPlugin\Smartreport;
+
+use Config;
+use Session;
+use Plugin;
+
+class Glpiversion 
 {
     /** @var int|null Cached major version — computed once per request. */
     private static $major = null;
@@ -68,7 +74,7 @@ class GlpiVersion
 
     // Render report form (GLPI 10/11 compatible)
     public static function renderForm(
-        PluginSmartreportReportdefination $item,
+        Reportdefination $item,
         array $widgets,
         array $meta
     ): void {
@@ -83,8 +89,8 @@ class GlpiVersion
                     'item_meta'          => $meta,
                     // Pass Execute right check to Twig — avoids calling PHP statics from template
                     'can_execute'        => Session::haveRight(
-                        PluginSmartreportReportdefination::$rightname,
-                        PluginSmartreportReportdefination::EXECUTE
+                        Reportdefination::$rightname,
+                        Reportdefination::EXECUTE
                     ),
                 ]
             );
@@ -101,8 +107,8 @@ class GlpiVersion
                 'item_meta'          => $meta,
                 // Pass Execute right check to Twig — avoids calling PHP statics from template
                 'can_execute'        => Session::haveRight(
-                    PluginSmartreportReportdefination::$rightname,
-                    PluginSmartreportReportdefination::EXECUTE
+                    Reportdefination::$rightname,
+                    Reportdefination::EXECUTE
                 ),
             ]
         );
@@ -121,4 +127,5 @@ class GlpiVersion
         // GLPI 10 fallback — DB::query() has existed since GLPI 0.x
         return $DB->query($sql);
     }
+
 }

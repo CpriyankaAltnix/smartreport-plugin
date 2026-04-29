@@ -31,23 +31,30 @@
  * -------------------------------------------------------------------------
  */
 
-include_once(__DIR__ . '/inc/glpiversion.class.php');
-include_once(__DIR__ . '/inc/reportdefination.class.php');
-include_once(__DIR__ . '/inc/generatedreport.class.php');
+// CS: need to check the fesibility to remove this lines
+// include_once(__DIR__ . '/inc/glpiversion.class.php');
+// include_once(__DIR__ . '/inc/reportdefination.class.php');
+// include_once(__DIR__ . '/inc/reportqueue.class.php');
+// include_once(__DIR__ . '/inc/generatedreport.class.php');
+
+use GlpiPlugin\Smartreport\Smartreport;
+use GlpiPlugin\Smartreport\Reportdefination;
+use GlpiPlugin\Smartreport\Profile;
 
 /**
  * Plugin install process
  */
 function plugin_smartreport_install(): bool
 {
-    $memory_limit       = (int)Toolbox::getMemoryLimit();
-    $max_execution_time = ini_get('max_execution_time');
-    if ($memory_limit > 0 && $memory_limit < (512 * 1024 * 1024)) {
-        ini_set('memory_limit', '512M');
-    }
-    if ($max_execution_time > 0 && $max_execution_time < 300) {
-        ini_set('max_execution_time', '300');
-    }
+    // CS: if no heavy installation we can remove this ini set
+    // $memory_limit       = (int)Toolbox::getMemoryLimit();
+    // $max_execution_time = ini_get('max_execution_time');
+    // if ($memory_limit > 0 && $memory_limit < (512 * 1024 * 1024)) {
+    //     ini_set('memory_limit', '512M');
+    // }
+    // if ($max_execution_time > 0 && $max_execution_time < 300) {
+    //     ini_set('max_execution_time', '300');
+    // }
 
     $plugin_fields = new Plugin();
     $plugin_fields->getFromDBbyDir('smartreport');
@@ -67,7 +74,7 @@ function plugin_smartreport_install(): bool
         echo "<td align='center'>";
     }
 
-    PluginSmartreportReportdefination::installData($migration, $version);
+    Reportdefination::installData($migration, $version);
 
     if (!is_dir(GLPI_SMARTREPORT_PLUGIN_DOC_DIR)) {
         @mkdir(GLPI_SMARTREPORT_PLUGIN_DOC_DIR, 0755, true);
@@ -85,6 +92,43 @@ function plugin_smartreport_install(): bool
 /**
  * Plugin uninstall process
  */
+// function plugin_smartreport_uninstall(): bool
+// {
+//     $_SESSION['uninstall_smartreport'] = true;
+
+//     echo "<center>";
+//     echo "<table class='tab_cadre_fixe'>";
+//     echo "<tr><th>" . __("MySQL tables uninstallation", "smartreport") . "<th></tr>";
+//     echo "<tr class='tab_bg_1'>";
+//     echo "<td align='center'>";
+
+//     $class = Reportdefination::class;
+
+//     if ($plug = isPluginItemType($class)) {
+//         $dir  = PLUGINSMARTREPORT_DIR . "/src/";
+//         $item = strtolower($plug['class']);
+
+//         if (file_exists("$dir$item.class.php")) {
+//             include_once("$dir$item.class.php");
+//             if (!call_user_func([$class, 'uninstall'])) {
+//                 return false;
+//             }
+//         }
+//     }
+
+//     echo "</td></tr></table></center>";
+
+//     unset($_SESSION['uninstall_smartreport']);
+
+//     ProfileRight::deleteProfileRights(['plugin_smartreport']);
+//     Config::deleteConfigurationValues('plugin:smartreport', ['smartreport_file_size_limit', 'smartreport_from_email', 'config_class']);
+
+//     $pref = new DisplayPreference();
+//     $pref->deleteByCriteria(['itemtype' => ['LIKE', 'PluginSmartreport%']]);
+
+//     return true;
+// }
+
 function plugin_smartreport_uninstall(): bool
 {
     $_SESSION['uninstall_smartreport'] = true;
@@ -95,18 +139,8 @@ function plugin_smartreport_uninstall(): bool
     echo "<tr class='tab_bg_1'>";
     echo "<td align='center'>";
 
-    $class = PluginSmartreportReportdefination::class;
-
-    if ($plug = isPluginItemType($class)) {
-        $dir  = PLUGINSMARTREPORT_DIR . "/inc/";
-        $item = strtolower($plug['class']);
-
-        if (file_exists("$dir$item.class.php")) {
-            include_once("$dir$item.class.php");
-            if (!call_user_func([$class, 'uninstall'])) {
-                return false;
-            }
-        }
+    if (!Reportdefination::uninstall()) {
+        return false;
     }
 
     echo "</td></tr></table></center>";
