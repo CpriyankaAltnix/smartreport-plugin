@@ -143,7 +143,7 @@ Then install and enable through **Setup → Plugins** as above.
 
 Navigate to **Setup → General** and open the **Smart Report** tab.
 
-![Configuration Tab](docs/screenshots/config-tab.png)
+![Configuration Tab](docs/screenshots/configuration.png)
 
 ### Settings
 
@@ -195,7 +195,7 @@ Both tasks operate in **External** mode — they are triggered by the system cro
 
 5. Click **Save**.
 
-![Report Creation Form](docs/screenshots/report-form.png)
+![Report Creation Form](docs/screenshots/report_creation.png)
 
 ### Executing a Report Manually
 
@@ -218,7 +218,7 @@ When the `scheduleReports` cron task fires:
 
 Navigate to **Plugins → Smart Report → Queue** to see the live execution queue.
 
-![Queue List View](docs/screenshots/queue-listview.png)
+![Queue List View](docs/screenshots/Queue_List_View.png)
 
 The list shows only **Pending** and **Running** jobs. Use GLPI's standard criteria bar to filter by status, report name, worker, or queue date. Completed jobs are not shown here — they are purged automatically after 7 days.
 
@@ -232,14 +232,11 @@ Generated files are listed in the **Generated Reports** tab of each report defin
 
 | Screen | Preview |
 |---|---|
-| Report creation form | ![Report Form](docs/screenshots/report-form.png) |
-| Configuration tab (Setup → General) | ![Config Tab](docs/screenshots/config-tab.png) |
-| Queue list view | ![Queue](docs/screenshots/queue-listview.png) |
-| Profile rights tab | ![Profile Rights](docs/screenshots/profile-rights.png) |
-| Generated report email (with attachment) | ![Email Attachment](docs/screenshots/email-attachment.png) |
-| Generated report email (download link) | ![Email Link](docs/screenshots/email-link.png) |
-
-> Screenshots go in `docs/screenshots/`. Add them by committing PNG files at the paths above.
+| Report creation form | ![Report Form](docs/screenshots/report_creation.png) |
+| Configuration tab (Setup → General) | ![Config Tab](docs/screenshots/configuration.png) |
+| Queue list view | ![Queue](docs/screenshots/Queue_List_View.png) |
+| Profile rights tab | ![Profile Rights](docs/screenshots/profile_rights.png) |
+| Generated report email (with attachment) | ![Email Attachment](docs/screenshots/generated_report.png)
 
 ---
 
