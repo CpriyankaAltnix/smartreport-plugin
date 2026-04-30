@@ -11,6 +11,7 @@ namespace GlpiPlugin\Smartreport;
 use Config;
 use Session;
 use Plugin;
+use GlpiPlugin\Smartreport\Reportdefination;
 
 class Glpiversion 
 {

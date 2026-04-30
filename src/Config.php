@@ -7,6 +7,7 @@ use Config as GlpiConfig;
 use Session;
 use Html;
 use Toolbox;
+use GlpiPlugin\Smartreport\Glpiversion;
 
 /**
  * Smart Report configuration tab under Setup → General.
@@ -67,7 +68,19 @@ class Config extends CommonGLPI
         // Read current values from GLPI's config store
         $values = GlpiConfig::getConfigurationValues(self::CONFIG_CONTEXT);
 
-        $from_email        = $values[self::CONFIG_KEY_FROM_EMAIL]      ?? '';
+        // $from_email        = $values[self::CONFIG_KEY_FROM_EMAIL]      ?? '';
+                // If no value has ever been saved, pre-populate from GLPI's own sender.
+        // Once the user saves (even with the same value), the stored value takes over.
+        $from_email_stored = $values[self::CONFIG_KEY_FROM_EMAIL] ?? null;
+        $is_default        = ($from_email_stored === null || $from_email_stored === '');
+
+        if ($is_default) {
+            $from_email = Glpiversion::getEmailSender()['email'];
+        } else {
+            $from_email = $from_email_stored;
+        }
+
+
         $file_size_limit   = isset($values[self::CONFIG_KEY_FILE_SIZE_LIMIT])
             ? (int)$values[self::CONFIG_KEY_FILE_SIZE_LIMIT]
             : self::DEFAULT_FILE_SIZE_LIMIT;
@@ -97,6 +110,12 @@ class Config extends CommonGLPI
             . " style='width:100%;max-width:400px'"
             . " value='" . htmlspecialchars($from_email) . "'"
             . " placeholder='reports@example.com' />";
+        if ($is_default && $from_email !== '') {
+            echo "&nbsp;<span class='text-muted' style='font-size:0.82em'>"
+                . "&#8592;&nbsp;" . __('GLPI default', 'smartreport')
+                . "</span>";
+        }
+
         echo "</td>";
         echo "</tr>";
 
@@ -137,8 +156,16 @@ class Config extends CommonGLPI
     {
         $values = GlpiConfig::getConfigurationValues(self::CONFIG_CONTEXT);
 
+        $from_email = trim($values[self::CONFIG_KEY_FROM_EMAIL] ?? '');
+
+        // If the user has never saved a custom address, fall back to GLPI's
+        // configured sender so emails are never sent from an empty address.
+        if ($from_email === '') {
+            $from_email = Glpiversion::getEmailSender()['email'];
+        }
+
         return [
-            self::CONFIG_KEY_FROM_EMAIL      => trim($values[self::CONFIG_KEY_FROM_EMAIL] ?? ''),
+            self::CONFIG_KEY_FROM_EMAIL      => $from_email,
             self::CONFIG_KEY_FILE_SIZE_LIMIT => max(
                 0,
                 (int)($values[self::CONFIG_KEY_FILE_SIZE_LIMIT] ?? self::DEFAULT_FILE_SIZE_LIMIT)

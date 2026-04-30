@@ -845,7 +845,7 @@ class Reportdefination extends \CommonDBTM
         $saved_session = $_SESSION;
 
         try {
-            fwrite($fp, "\xEF\xBB\xBF"); // UTF-8 BOM — Excel needs this to detect UTF-8
+            fwrite($fp, "\xEF\xBB\xBF"); // UTF-8 BOM — Excel needs this to detect UTF-8            
 
             self::initCronSession();
 
@@ -1048,6 +1048,7 @@ class Reportdefination extends \CommonDBTM
 
         $_SESSION['glpilist_limit'] = self::SEARCH_PAGE_SIZE;
         $_SESSION['glpismartreport_current_userId'] = $uid;
+        $_SESSION['glpiname'] = $user_row['name'];
 
         \Toolbox::logInFile(
             'smartreport',

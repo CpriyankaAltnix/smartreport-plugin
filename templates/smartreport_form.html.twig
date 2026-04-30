@@ -100,9 +100,9 @@
                                     }}
 
 									{# Next run #}
-									{% set launch = item.fields['state'] != constant('PluginSmartreportReportdefination::STATE_RUNNING') %}
+									{% set launch = item.fields['state'] != constant('GlpiPlugin\\Smartreport\\Reportdefination::STATE_RUNNING') %}
 									{% set next_run_field %}
-									{% if item.fields['status'] != constant('PluginSmartreportReportdefination::STATE_WAITING') %}
+									{% if item.fields['status'] != constant('GlpiPlugin\\Smartreport\\Reportdefination::STATE_WAITING') %}
 										{{ item.getStateName(item.fields['status']) }}
 									{% else %}
 										{{ item_meta.next_run_display }}
@@ -115,7 +115,7 @@
 										<button class="btn btn-primary" type="submit" name="execute" value="{{ item.fields['name'] }}">{{ __('Execute') }}</button>
 									{% endif %}
 
-									{% if can_execute and item.fields['status'] == constant('PluginSmartreportReportdefination::STATE_RUNNING') %}
+									{% if can_execute and item.fields['status'] == constant('GlpiPlugin\\Smartreport\\Reportdefination::STATE_RUNNING') %}
 										<button class="btn btn-primary" type="submit" name="resetstate">
 											<i class="ti ti-circle-x me-1"></i>
 											{{ __('Blank') }}
